@@ -64,16 +64,20 @@
           <div>
             <label for="curso" class="block text-sm font-medium text-white mb-1.5">Curso</label>
             <select id="curso" v-model="curso" class="w-full bg-white rounded-lg px-3 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500">
-              <option value="0">Seleccionar</option>
-              <option v-for="n in 5" :key="n" :value="String(n)">{{ n }}</option>
+              <option value="" disabled>Seleccionar</option>
+              <option v-for="c in CUSRO" :key="c" :value="c">
+                {{ ETIQUETAS_CURSO[c] }}
+              </option>
             </select>
           </div>
 
           <div>
             <label for="semestre" class="block text-sm font-medium text-white mb-1.5">Semestre</label>
             <select id="semestre" v-model="semestre" class="w-full bg-white rounded-lg px-3 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500">
-              <option value="0">Seleccionar</option>
-              <option v-for="n in 10" :key="n" :value="String(n)">{{ n }}</option>
+              <option value="" disabled>Seleccionar</option>
+              <option v-for="s in SEMESTRE" :key="s" :value="s">
+                {{ ETIQUETAS_SEMESTRE[s] }}
+              </option>
             </select>
           </div>
 
@@ -182,6 +186,14 @@ import { useRouter } from 'vue-router'
 import { useAlertas } from '@/composables/useAlertas'
 import { useSesionStore } from '@/stores/useSesionStore'
 import { useSeleccionStore } from '@/stores/useSeleccionStore'
+import {
+  CUSRO,
+  ETIQUETAS_CURSO,
+  ETIQUETAS_SEMESTRE,
+  SEMESTRE,
+  type curso,
+  type semestre
+} from '@/services/cursoSemestreService'
 
 import ModalSala from '@/components/SalaModal.vue'
 import ModalEmpresa from '@/components/EmpresaModal.vue'
