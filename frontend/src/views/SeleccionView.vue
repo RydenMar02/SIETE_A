@@ -271,9 +271,9 @@ const getSalas = async () => {
       id_usuario: esDocente.value ? idUsuario.value : undefined
     })
 
-    salas.value = (data?.salausuarios ?? []).map((s: any) => ({
+    salas.value = (data?.salaUsuarios ?? []).map((s: any) => ({
       id_sala: s.id_sala,
-      id_salausuario: s.id_salausuario,
+      id_salausuario: s.id_salausuario, 
       sala: s.Sala?.sala ?? 'Desconocido',
       nombre: s.Profesor?.nombre ?? 'Desconocido',
       id_profesor: s.Profesor?.id_usuario ?? null
