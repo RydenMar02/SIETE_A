@@ -33,6 +33,7 @@ npm install @tabler/icons-webfont
 
 -- PINIA 
  npm install pinia
+ npm install pinia-plugin-persistedstate
 
  luego en el main.ts
  import { createPinia } from "pinia";
@@ -47,3 +48,13 @@ tailwindcss(),
 
 --en style.css
 @import "tailwindcss";
+
+
+-- ALERTAS
+npm install sweetalert2 vue-toastification@next
+
+
+
+npm install axios
+
+npm install chart.js vue-chartjs

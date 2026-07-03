@@ -1,1 +1,7 @@
 @import "tailwindcss";
+
+@theme {
+  --color-siete-bg: #4b4768;
+  --color-siete-panel: #3d3a56;
+  --color-siete-light: #e8e6ea;
+}
