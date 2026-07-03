@@ -6,7 +6,9 @@ export const tieneRol = (...rolesPermitidos) => {
             });
         }
 
-        if (!rolesPermitidos.includes(req.usuario.id_rol)) {
+        const idRol = parseInt(req.usuario.id_rol);
+
+        if (!rolesPermitidos.includes(idRol)) {
             return res.status(403).json({
                 msg: 'No tenés permisos para realizar esta acción'
             });

@@ -3,25 +3,41 @@ import SalaUsuario from '../models/salaUsuario.js';
 import Usuario from '../models/usuario.js';
 
 export const getSalasConProfesores = async (req, res) => {
-    const { desde = 0, limite = 10 } = req.query;
+    const { desde = 0, limite = 10, curso, semestre } = req.query;
 
     try {
-        const [total, salasUsuarios] = await Promise.all([
-            SalaUsuario.count({ where: { tipo: 'PROFESOR', estado: 1 } }),
+        // Filtro de sala por curso y semestre
+        const whereSala = {};
+        if (curso) whereSala.curso = curso;
+        if (semestre) whereSala.semestre = semestre;
+
+        const [total, salaUsuarios] = await Promise.all([
+            SalaUsuario.count({
+                where: { tipo: 'PROFESOR', estado: 1 },
+                include: [{ model: Sala, where: whereSala }]
+            }),
             SalaUsuario.findAll({
                 where: { tipo: 'PROFESOR', estado: 1 },
                 include: [
-                    { model: Sala, attributes: ['sala', 'curso', 'semestre'] },
-                    { model: Usuario, as: 'Profesor', attributes: ['id_usuario', 'nombre'] }
+                    {
+                        model: Sala,
+                        where: whereSala,
+                        attributes: ['id_sala', 'sala', 'curso', 'semestre']
+                    },
+                    {
+                        model: Usuario,
+                        as: 'Profesor',
+                        attributes: ['id_usuario', 'nombre']
+                    }
                 ],
-                order: [['idsala_usuario', 'ASC']],
+                order: [['id_salausuario', 'ASC']],
                 offset: parseInt(desde),
                 limit: parseInt(limite),
-                attributes: ['idsala_usuario', 'id_sala', 'id_profesor']
+                attributes: ['id_salausuario', 'id_sala', 'id_profesor']
             })
         ]);
 
-        res.json({ total, salasUsuarios });
+        res.json({ total, salaUsuarios });
     } catch (error) {
         console.error(error);
         res.status(500).json({ msg: 'Error al obtener salas con profesores' });
@@ -60,7 +76,7 @@ export const ingresarSala = async (req, res) => {
             id_alumno,
             tipo: 'ALUMNO',
             estado: 1,
-            baja: null
+            baja: 0
         });
 
         res.status(201).json({ msg: 'Ingreso a la sala exitoso', registro });

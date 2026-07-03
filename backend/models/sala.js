@@ -43,7 +43,7 @@ const Sala = db.define('Sala', {
     estado: {
         type: DataTypes.TINYINT,
         allowNull: false,
-        defaultValue: 1
+        defaultValue: 0
     }
 }, {
     tableName: 'sala',

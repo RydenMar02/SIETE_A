@@ -108,7 +108,7 @@ const login = async () => {
     })
 
     await makeAlert('¡Éxito!', 'Has iniciado sesión correctamente.', 'success')
-    router.push('/seleccion_clase')
+    router.push('/seleccion')
   } catch (error) {
     console.error('Error al iniciar sesión:', error)
     makeAlert('Error', 'Cédula o contraseña incorrectos.', 'error')

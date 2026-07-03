@@ -4,7 +4,7 @@ import Usuario from './usuario.js';
 import Sala from './sala.js';
 
 const SalaUsuario = db.define('SalaUsuario', {
-    idsala_usuario: {
+    id_salausuario: {
         type: DataTypes.INTEGER,
         primaryKey: true,
         autoIncrement: true
@@ -18,8 +18,9 @@ const SalaUsuario = db.define('SalaUsuario', {
         allowNull: false
     },
     id_alumno: {
-        type: DataTypes.INTEGER,
-        allowNull: true
+    type: DataTypes.INTEGER,
+    allowNull: true,   
+    defaultValue: 0     
     },
     tipo: {
         type: DataTypes.ENUM('PROFESOR', 'ALUMNO'),

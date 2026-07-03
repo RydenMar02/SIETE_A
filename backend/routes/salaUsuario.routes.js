@@ -10,7 +10,7 @@ import { validar } from '../middlewares/validaciones.middleware.js';
 
 const router = Router();
 
-router.get('/', validarJWT, tieneRol(1, 2), getSalasConProfesores);
+router.get('/', validarJWT, tieneRol(1, 2, 3), getSalasConProfesores);
 
 router.post('/',
     validarJWT,

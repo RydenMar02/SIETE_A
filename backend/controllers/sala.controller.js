@@ -48,6 +48,21 @@ export const getSalas = async (req, res) => {
     }
 };
 
+export const getSalasDisponibles = async (req, res) => {
+    try {
+        const salas = await Sala.findAll({
+            where: { estado: 1 },
+            attributes: ['id_sala', 'sala', 'curso', 'semestre'],
+            order: [['id_sala', 'ASC']]
+        });
+
+        res.json({ total: salas.length, salas });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ msg: 'Error al obtener salas disponibles' });
+    }
+};
+
 export const getSalaById = async (req, res) => {
     try {
         const { id } = req.params;
@@ -119,9 +134,10 @@ export const crearSala = async (req, res) => {
             {
                 id_sala: nuevaSala.id_sala,
                 id_profesor,
+                id_alumno: null,
                 tipo: 'PROFESOR',
                 estado: 1,
-                baja: null
+                baja: 0
             },
             { transaction }
         );
