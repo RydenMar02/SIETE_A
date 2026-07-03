@@ -45,8 +45,10 @@
         <div>
           <label for="curso" class="block text-sm font-medium mb-1.5">Curso</label>
           <select id="curso" v-model="form.curso" class="w-full bg-white text-gray-900 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-500">
-            <option value="0">Seleccionar</option>
-            <option v-for="n in 5" :key="n" :value="String(n)">{{ n }}</option>
+            <option value="" disabled>Seleccionar</option>
+              <option v-for="c in CUSRO" :key="c" :value="c">
+                {{ ETIQUETAS_CURSO[c] }}
+              </option>
           </select>
         </div>
 
@@ -54,8 +56,10 @@
         <div>
           <label for="semestre" class="block text-sm font-medium mb-1.5">Semestre</label>
           <select id="semestre" v-model="form.semestre" class="w-full bg-white text-gray-900 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-500">
-            <option value="0">Seleccionar</option>
-            <option v-for="n in 10" :key="n" :value="String(n)">{{ n }}</option>
+            <option value="" disabled>Seleccionar</option>
+              <option v-for="s in SEMESTRE" :key="s" :value="s">
+                {{ ETIQUETAS_SEMESTRE[s] }}
+              </option>
           </select>
         </div>
 
@@ -138,6 +142,14 @@ import {
   ingresarASala,
   type SalaPayload
 } from '@/services/salaService'
+import {
+  CUSRO,
+  ETIQUETAS_CURSO,
+  ETIQUETAS_SEMESTRE,
+  SEMESTRE,
+  type curso,
+  type semestre
+} from '@/services/cursoSemestreService'
 
 // ---------- Props ----------
 interface SalaProp {
@@ -175,14 +187,16 @@ const esModificacion = computed(() => !!props.sala?.id_sala)
 // ---------- Formulario ----------
 const form = reactive({
   sala: props.sala?.sala ?? '',
-  curso: '0',
-  semestre: '0',
+  curso: '' as curso | '',
+  semestre: '' as semestre | '',
   contra: ''
 })
 const confirmPassword = ref('')
 
 // ---------- Validaciones ----------
 // Funciones puras: reciben el valor y devuelven el mensaje de error (o '').
+// Al no depender de refs internas, son fáciles de reusar en otros formularios
+// de contraseña (ej. el modal de usuario) sin copiar y pegar.
 const validarNombreSala = (valor: string): string => {
   const nombre = valor.trim().replace(/\s+/g, ' ')
   if (!nombre) return 'Por favor, ingrese el nombre.'
