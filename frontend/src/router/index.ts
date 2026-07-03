@@ -17,6 +17,11 @@ const router = createRouter({
             path: '/menu',
             name: 'menu',
             component: () => import('../views/MenuView.vue')
+        },
+        {
+            path: '/asiento',
+            name: 'asiento',
+            component: () => import('../views/AsientoContableView.vue')
         }
     ]
 })
