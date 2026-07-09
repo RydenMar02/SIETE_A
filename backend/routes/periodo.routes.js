@@ -13,8 +13,8 @@ import { validar } from '../middlewares/validaciones.middleware.js';
 
 const router = Router();
 
-router.get('/',       validarJWT, tieneRol(1, 2), getPeriodos);
-router.get('/:id',    validarJWT, tieneRol(1, 2), getPeriodoById);
+router.get('/',       validarJWT, tieneRol(1, 2, 3), getPeriodos);
+router.get('/:id',    validarJWT, tieneRol(1, 2, 3), getPeriodoById);
 
 router.post('/',
     validarJWT,

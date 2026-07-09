@@ -4,38 +4,13 @@ import Usuario from './usuario.js';
 import Sala from './sala.js';
 
 const SalaUsuario = db.define('SalaUsuario', {
-    id_salausuario: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true
-    },
-    id_sala: {
-        type: DataTypes.INTEGER,
-        allowNull: false
-    },
-    id_profesor: {
-        type: DataTypes.INTEGER,
-        allowNull: false
-    },
-    id_alumno: {
-    type: DataTypes.INTEGER,
-    allowNull: true,   
-    defaultValue: 0     
-    },
-    tipo: {
-        type: DataTypes.ENUM('PROFESOR', 'ALUMNO'),
-        allowNull: false
-    },
-    estado: {
-        type: DataTypes.TINYINT,
-        allowNull: false,
-        defaultValue: 1
-    },
-    baja: {
-        type: DataTypes.TINYINT,
-        allowNull: true,
-        defaultValue: null
-    }
+    id_salausuario: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    id_sala: { type: DataTypes.INTEGER, allowNull: false },
+    id_profesor: { type: DataTypes.INTEGER, allowNull: true },
+    id_alumno: { type: DataTypes.INTEGER, allowNull: true, defaultValue: null },
+    tipo: { type: DataTypes.ENUM('PROFESOR', 'ALUMNO'), allowNull: false },
+    estado: { type: DataTypes.TINYINT, allowNull: false, defaultValue: 1 },
+    baja: { type: DataTypes.TINYINT, allowNull: false, defaultValue: 0 }
 }, {
     tableName: 'sala_usuario',
     timestamps: true

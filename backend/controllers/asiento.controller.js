@@ -186,7 +186,7 @@ export const actualizarAsiento = async (req, res) => {
 
         if (asiento.estado === 'procesado') {
             await transaction.rollback();
-            return res.status(400).json({ msg: 'No se puede modificar un asiento procesado' });
+            return res.status(400).json({ msg: 'e modificar un asiento procesado' });
         }
 
         if (asientoDetalles && asientoDetalles.length > 0) {
@@ -247,7 +247,7 @@ export const eliminarAsiento = async (req, res) => {
 
         if (asiento.estado === 'procesado') {
             await transaction.rollback();
-            return res.status(400).json({ msg: 'No se puede eliminar un asiento procesado' });
+            return res.status(400).json({ msg: 'e eliminar un asiento procesado' });
         }
 
         await asiento.destroy({ transaction });
@@ -272,7 +272,7 @@ export const procesarAsiento = async (req, res) => {
             return res.status(400).json({ msg: 'El asiento ya está procesado' });
         }
         if (Math.abs(parseFloat(asiento.diferencia)) > 0.01) {
-            return res.status(400).json({ msg: 'No se puede procesar un asiento no balanceado' });
+            return res.status(400).json({ msg: 'e procesar un asiento no balanceado' });
         }
 
         await asiento.update({ estado: 'procesado' });

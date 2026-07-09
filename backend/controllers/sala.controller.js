@@ -10,13 +10,8 @@ export const getSalas = async (req, res) => {
     try {
         const sql = `
             SELECT 
-                s.id_sala,
-                s.sala,
-                s.curso,
-                s.semestre,
-                s.contra,
-                u.id_usuario,
-                u.nombre,
+                s.id_sala, s.sala, s.curso, s.semestre, s.contra,
+                u.id_usuario, u.nombre,
                 COUNT(suAlumno.id_alumno) AS cantidad_alumnos
             FROM sala_usuario suProfesor
             INNER JOIN sala s ON s.id_sala = suProfesor.id_sala
@@ -24,7 +19,7 @@ export const getSalas = async (req, res) => {
             LEFT JOIN sala_usuario suAlumno 
                 ON suAlumno.id_sala = s.id_sala
                 AND suAlumno.tipo = 'ALUMNO'
-                AND suAlumno.baja IS NULL
+                AND suAlumno.baja = 0
             WHERE suProfesor.id_profesor = :id_profesor
                 AND suProfesor.tipo = 'PROFESOR'
             GROUP BY s.id_sala, s.sala, s.curso, s.semestre, s.contra, u.id_usuario, u.nombre
@@ -33,11 +28,7 @@ export const getSalas = async (req, res) => {
         `;
 
         const salas = await db.query(sql, {
-            replacements: {
-                id_profesor,
-                limite: parseInt(limite),
-                desde: parseInt(desde)
-            },
+            replacements: { id_profesor, limite: parseInt(limite), desde: parseInt(desde) },
             type: Sequelize.QueryTypes.SELECT
         });
 
@@ -48,30 +39,11 @@ export const getSalas = async (req, res) => {
     }
 };
 
-export const getSalasDisponibles = async (req, res) => {
-    try {
-        const salas = await Sala.findAll({
-            where: { estado: 1 },
-            attributes: ['id_sala', 'sala', 'curso', 'semestre'],
-            order: [['id_sala', 'ASC']]
-        });
-
-        res.json({ total: salas.length, salas });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ msg: 'Error al obtener salas disponibles' });
-    }
-};
-
 export const getSalaById = async (req, res) => {
     try {
         const { id } = req.params;
-        const sala = await Sala.findByPk(id, {
-            attributes: ['contra']
-        });
-        if (!sala) {
-            return res.status(404).json({ msg: 'Sala no encontrada' });
-        }
+        const sala = await Sala.findByPk(id, { attributes: ['contra'] });
+        if (!sala) return res.status(404).json({ msg: 'Sala no encontrada' });
         res.json(sala);
     } catch (error) {
         console.error(error);
@@ -86,29 +58,22 @@ export const getAlumnosPorSala = async (req, res) => {
     try {
         const sql = `
             SELECT 
-                u.id_usuario,
-                u.nombre,
-                u.cedula,
+                u.id_usuario, u.nombre, u.cedula,
                 IF(u.estado = 1, 'ACTIVO', 'INACTIVO') AS estado,
-                suAlumno.tipo,
-                suAlumno.baja
+                suAlumno.tipo, suAlumno.baja
             FROM sala_usuario suAlumno
             INNER JOIN usuario u ON u.id_usuario = suAlumno.id_alumno
-            INNER JOIN sala_usuario suProfesor 
-                ON suProfesor.id_sala = suAlumno.id_sala
+            INNER JOIN sala_usuario suProfesor ON suProfesor.id_sala = suAlumno.id_sala
             WHERE suAlumno.id_sala = :id_sala
                 AND suAlumno.tipo = 'ALUMNO'
-                AND suAlumno.baja IS NULL
+                AND suAlumno.baja = 0
                 AND suProfesor.id_profesor = :id_profesor
                 AND suProfesor.tipo = 'PROFESOR'
-            ORDER BY suAlumno.idsala_usuario
+            ORDER BY suAlumno.id_salausuario
         `;
 
         const alumnos = await db.query(sql, {
-            replacements: {
-                id_sala: parseInt(id),
-                id_profesor
-            },
+            replacements: { id_sala: parseInt(id), id_profesor },
             type: Sequelize.QueryTypes.SELECT
         });
 
@@ -131,14 +96,7 @@ export const crearSala = async (req, res) => {
         );
 
         await SalaUsuario.create(
-            {
-                id_sala: nuevaSala.id_sala,
-                id_profesor,
-                id_alumno: null,
-                tipo: 'PROFESOR',
-                estado: 1,
-                baja: 0
-            },
+            { id_sala: nuevaSala.id_sala, id_profesor, id_alumno: null, tipo: 'PROFESOR', estado: 1, baja: 0 },
             { transaction }
         );
 
@@ -157,9 +115,7 @@ export const actualizarSala = async (req, res) => {
 
     try {
         const registro = await Sala.findByPk(id);
-        if (!registro) {
-            return res.status(404).json({ msg: 'Sala no encontrada' });
-        }
+        if (!registro) return res.status(404).json({ msg: 'Sala no encontrada' });
         await registro.update({ sala, curso, semestre, contra });
         res.json({ msg: 'Sala actualizada', sala: registro });
     } catch (error) {
@@ -173,9 +129,7 @@ export const desactivarSala = async (req, res) => {
 
     try {
         const sala = await Sala.findByPk(id);
-        if (!sala) {
-            return res.status(404).json({ msg: 'Sala no encontrada' });
-        }
+        if (!sala) return res.status(404).json({ msg: 'Sala no encontrada' });
         await sala.update({ estado: 0 });
         res.json({ msg: 'Sala desactivada' });
     } catch (error) {
