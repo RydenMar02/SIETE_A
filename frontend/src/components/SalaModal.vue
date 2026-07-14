@@ -293,14 +293,14 @@ const ingresar = async () => {
       id_sala: props.sala.id_sala,
       contrasena: form.contra,
       tipo: 'ALUMNO',
-      idusuario_alumno: sesion.idUsuario,
-      idusuario_docente: seleccion.idProfesor,
+      id_alumno: sesion.idUsuario,
+      id_profesor: seleccion.idProfesor,
       baja: true,
       estado: true
     })
 
-    if (resultado.idsala_usuario) {
-      seleccion.setSala(props.sala.sala, resultado.idsala_usuario, seleccion.idProfesor)
+    if (resultado.id_salausuario) {
+      seleccion.setSala(props.sala.sala, resultado.id_salausuario, seleccion.idProfesor)
     }
 
     makeToast('Ingreso a la sala exitoso.', 'success')
@@ -308,6 +308,7 @@ const ingresar = async () => {
     emit('cerrar')
   } catch (error) {
     manejarError(error, 'No se pudo ingresar a la sala. Verifique la contraseña e intente nuevamente.')
+    
   }
 }
 

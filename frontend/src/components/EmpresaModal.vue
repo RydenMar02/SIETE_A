@@ -247,7 +247,7 @@ const armarPayload = (): EmpresaPayload => ({
   ruc: form.ruc,
   sigla: form.sigla,
   id_periodo: form.id_periodo,
-  idsala_usuario: seleccion.idSalaUsuario,
+  id_salausuario: seleccion.idSalaUsuario,
   estado: true
 })
 
@@ -280,7 +280,7 @@ const periodos = reactive<Periodo[]>([])
 const cargarPeriodos = async () => {
   try {
     const { data } = await obtenerPeriodos()
-    periodos.splice(0, periodos.length, ...(data.periodos ?? []))
+    periodos.splice(0, periodos.length, ...data)
   } catch (error) {
     console.error(error)
     makeToast('Error al obtener los períodos.', 'error')

@@ -119,7 +119,7 @@ import {
 const props = defineProps<{
   tipo: TipoClienteProveedor
   tituloModal: string
-  subtituloModal: string
+  subtituloModal?: string
   itemEditar?: Record<string, any> | null
 }>()
 

@@ -298,24 +298,29 @@ const seleccionarSala = async (sala: Sala) => {
     return
   }
   const tipoUsuario = esDocente.value ? 'PROFESOR' : 'ALUMNO'
-
+ 
   try {
-    const { data } = await obtenerRelacionSalaUsuario({
+    const { data: relacion } = await obtenerRelacionSalaUsuario({
       curso: curso.value,
       semestre: semestre.value,
       id_usuario: idUsuario.value,
       id_sala: sala.id_sala,
       tipo: tipoUsuario
     })
-
-    const relacion = data.salaUsuario?.[0]
+ 
     if (!relacion) {
       makeToast('No se encontró la relación entre usuario y sala.', 'error')
       return
     }
-
+ 
+    const idPropietarioEsperado = tipoUsuario === 'ALUMNO' ? relacion.id_alumno : relacion.id_profesor
+    if (idPropietarioEsperado !== idUsuario.value) {
+      makeToast('No se encontró tu registro en esta sala. Probá "Ingresar" para registrarte primero.', 'warning')
+      return
+    }
+ 
     seleccion.setSala(sala.sala, relacion.id_salausuario, sala.id_profesor ?? 0)
-
+ 
     makeToast(`Ingresaste a la sala: ${sala.sala}`, 'success')
     pasoActual.value = 3
     getEmpresas()
@@ -348,6 +353,7 @@ const cerrarModalSala = () => {
   mostrarModalSala.value = false
 }
 
+
 // ---------- Paso 3: Empresas ----------
 const empresas = ref<Empresa[]>([])
 
@@ -356,6 +362,7 @@ const getEmpresas = async () => {
     const { data } = await obtenerEmpresasPorSalaUsuario(seleccion.idSalaUsuario)
     empresas.value = data.empresas ?? []
   } catch (error) {
+    empresas.value = []
     manejarError(error, 'No existen empresas en esta sala. Creá una empresa primero.')
   }
 }
