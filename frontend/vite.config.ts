@@ -12,7 +12,8 @@ export default defineConfig({
     tailwindcss(),
   ],
   server: {
-    host: true
+    host: true,
+    port: 5173
   },
   resolve: {
     alias: {
