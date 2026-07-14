@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>LIBRO MAYOR</title>
+
+  <style>
+    @page {
+      size: A4;
+      margin: 20mm;
+
+      @bottom-right {
+        content: "Hoja " counter(page) " de " counter(pages);
+        font-family: "Arial Narrow", Arial, sans-serif;
+        font-size: 8pt;
+      }
+    }
+
+    body {
+      font-family: "Arial Narrow", Arial, sans-serif;
+      font-size: 8pt;
+      color: #000;
+      margin: 0;
+      padding: 0;
+      position: relative;
+    }
+
+    /* ENCABEZADO */
+    .encabezado {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #000;
+      padding: 10px 20px;
+      margin-bottom: 10px;
+    }
+
+    .encabezado img {
+      height: 50px;
+    }
+
+    .encabezado-texto {
+      text-align: center;
+      flex: 1;
+      font-size: 9pt;
+      line-height: 1.2;
+    }
+
+    .encabezado-texto strong {
+      display: block;
+      font-size: 11pt;
+      margin-bottom: 3px;
+    }
+
+    .barra-inferior {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 8pt;
+      margin-top: 10px;
+      padding: 0 20px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+      margin-top: 5px;
+      margin-bottom: 15px;
+      font-size: 13pt;
+      text-transform: uppercase;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* Formato T contable */
+    .cuenta {
+      margin: 10px 0 20px 0;
+      border: 1px solid #000;
+      border-radius: 5px;
+      padding: 5px 10px;
+      page-break-inside: avoid;
+    }
+
+    .cuenta h3 {
+      font-size: 10pt;
+      margin: 0 0 5px 0;
+      text-transform: uppercase;
+      color: #2c3e50;
+    }
+
+    table.mayor {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 5px;
+    }
+
+    table.mayor th,
+    table.mayor td {
+      border: 1px solid #000;
+      padding: 4px 5px;
+      font-size: 8pt;
+    }
+
+    table.mayor th {
+      background-color: #f8f8f8;
+      text-align: center;
+      font-weight: bold;
+    }
+
+    table.mayor td {
+      height: 18px;
+      vertical-align: top;
+    }
+
+    .saldo {
+      text-align: right;
+      font-weight: bold;
+      border-top: 2px solid #000;
+      padding-top: 3px;
+      font-size: 9pt;
+    }
+
+    /* MARCA DE AGUA */
+    .marca-agua {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      opacity: 0.1;
+      z-index: 0;
+      width: 400px;
+      pointer-events: none;
+    }
+
+    .footer {
+      display: flex;
+      justify-content: flex-end;
+      font-size: 8pt;
+      margin-top: 15px;
+      padding-right: 20px;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Encabezado institucional -->
+  <div class="encabezado">
+    <img src="{{unc}}" alt="Logo Izquierdo">
+    <div class="encabezado-texto">
+      <strong>UNIVERSIDAD NACIONAL DE CONCEPCIÓN</strong>
+      FACULTAD DE CIENCIAS ECONÓMICAS Y ADMINISTRATIVAS<br>
+      CARRERA DE CONTADURÍA PÚBLICA
+    </div>
+    <img src="{{fcea}}" alt="Logo Derecho">
+  </div>
+
+  <div class="barra-inferior">
+    <div>
+      <h3>Empresa: {{empresa}}</h3>
+    </div>
+    <div id="fecha-hora"></div>
+  </div>
+
+  <h1>LIBRO MAYOR</h1>
+
+  {{#each registros}}
+  <div class="cuenta">
+    <h3>{{codigo_cuenta}} — {{nombre_cuenta}}</h3>
+
+    <table class="mayor">
+      <thead>
+        <tr>
+          <th>Debe (Gs.)</th>
+          <th>Haber (Gs.)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="text-align:right;">{{total_debe}}</td>
+          <td style="text-align:right;">{{total_haber}}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="saldo">
+      Saldo: {{saldo}} Gs.
+    </div>
+  </div>
+  {{/each}}
+
+  <img src="{{marcaAgua}}" class="marca-agua" alt="Marca de agua">
+
+  <script>
+    const ahora = new Date();
+    const opcionesFecha = { day: '2-digit', month: '2-digit', year: 'numeric' };
+    const fecha = ahora.toLocaleDateString('es-PY', opcionesFecha);
+    const hora = ahora.toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' });
+    document.getElementById('fecha-hora').innerHTML = `${fecha}<br>${hora}`;
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Reporte de Clientes</title>
+
+  <style>
+    @page {
+      size: A4;
+      margin: 20mm;
+
+      @bottom-right {
+        content: "Hoja " counter(page) " de " counter(pages);
+        font-family: "Arial Narrow", Arial, sans-serif;
+        font-size: 8pt;
+      }
+    }
+
+    body {
+      font-family: "Arial Narrow", Arial, sans-serif;
+      font-size: 8pt;
+      color: #000;
+      margin: 0;
+      padding: 0;
+      position: relative;
+    }
+
+    /* ENCABEZADO */
+    .encabezado {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #000;
+      padding: 10px 20px;
+      margin-bottom: 10px;
+    }
+
+    .encabezado img {
+      height: 50px;
+    }
+
+    .encabezado-texto {
+      text-align: center;
+      flex: 1;
+      font-size: 9pt;
+      line-height: 1.2;
+    }
+
+    .encabezado-texto strong {
+      display: block;
+      font-size: 11pt;
+      margin-bottom: 3px;
+    }
+
+    .footer {
+      display: flex;
+      justify-content: flex-end;
+      font-size: 8pt;
+      margin-top: 10px;
+      padding-right: 20px;
+    }
+
+    .empresa {
+      display: flex;
+      justify-content: space-between;
+      font-size: 8pt;
+      margin-top: 10px;
+    }
+
+    .barra-inferior {
+      display: flex;
+      justify-content: space-between;
+      /* Empresa a la izquierda, fecha a la derecha */
+      align-items: center;
+      font-size: 8pt;
+      margin-top: 10px;
+      padding: 0 20px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+      margin-top: 5px;
+      margin-bottom: 10px;
+      font-size: 13pt;
+      text-transform: uppercase;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* TABLA - adaptada del código 1 */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 8pt;
+      margin: 0 auto;
+      position: relative;
+      z-index: 2;
+    }
+
+    th,
+    td {
+      border: 1px solid #000;
+      padding: 3px 5px;
+      text-align: left;
+    }
+
+    th {
+      font-size: 9pt;
+      text-align: center;
+      background-color: #f8f8f8;
+    }
+
+    tfoot td {
+      border: none;
+      font-size: 8pt;
+    }
+
+    /* MARCA DE AGUA */
+    .marca-agua {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      opacity: 0.15;
+      z-index: 0;
+      width: 380px;
+      pointer-events: none;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Encabezado institucional -->
+  <div class="encabezado">
+    <img src="{{unc}}" alt="Logo Izquierdo">
+    <div class="encabezado-texto">
+      <strong>UNIVERSIDAD NACIONAL DE CONCEPCIÓN</strong>
+      FACULTAD DE CIENCIAS ECONÓMICAS Y ADMINISTRATIVAS<br>
+      CARRERA DE CONTADURÍA PÚBLICA
+    </div>
+    <img src="{{fcea}}" alt="Logo Derecho">
+  </div>
+  <div class="barra-inferior">
+    <div class="empresa">
+      <h3>Empresa: {{empresa}}</h3>
+    </div>
+    <div id="fecha-hora"></div>
+  </div>
+  <div class="footer">
+    <div id="fecha-hora"></div>
+    <div id="numero-pagina"></div>
+  </div>
+  <!-- Título -->
+  <h1>LISTADO DE CLIENTES</h1>
+
+  <!-- Tabla -->
+  <table>
+    <thead>
+      <tr>
+        <th>R.U.C. / C.I.</th>
+        <th>Razón Social</th>
+        <th>Dirección</th>
+        <th>Teléfono</th>
+        <th>Correo</th>
+        <th>Ciudad</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each registros}}
+      <tr>
+        <td>{{numero_identificacion}}</td>
+        <td>{{razon_social}}</td>
+        <td>{{direccion}}</td>
+        <td>{{telefono}}</td>
+        <td>{{correo}}</td>
+        <td>{{ciudad}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+  <!-- Marca de agua -->
+  <img src="{{marcaAgua}}" class="marca-agua" alt="Marca de agua">
+  <script>
+    // Mostrar fecha y hora actual
+    const ahora = new Date();
+    const opcionesFecha = { day: '2-digit', month: '2-digit', year: 'numeric' };
+    const fecha = ahora.toLocaleDateString('es-PY', opcionesFecha);
+    const hora = ahora.toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' });
+    document.getElementById('fecha-hora').innerHTML = `${fecha}<br>${hora}`;
+  </script>
+</body>
+</html>

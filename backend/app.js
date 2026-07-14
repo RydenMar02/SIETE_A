@@ -15,6 +15,8 @@ import sucursalRoutes from './routes/sucursal.routes.js';
 import clienteProveedorRoutes from './routes/clienteProveedor.routes.js';
 import compraVentaRoutes from './routes/compraVenta.routes.js';
 import asientoRoutes from './routes/asiento.routes.js';
+import reportesRoutes from './routes/reportes.routes.js';
+
 
 const app = express();
 
@@ -39,7 +41,7 @@ app.use('/api/sucursales', sucursalRoutes);
 app.use('/api/clientes-proveedores', clienteProveedorRoutes);
 app.use('/api/compras-ventas', compraVentaRoutes);
 app.use('/api/asientos', asientoRoutes);
-
+app.use('/api/reportes', reportesRoutes);
 
 app.get('/', (req, res) => {
     res.json({ msg: 'API funcionando correctamente' });

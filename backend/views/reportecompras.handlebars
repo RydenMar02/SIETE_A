@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>REPORTE DE COMPRAS</title>
+
+  <style>
+    @page {
+      size: A4;
+      margin: 20mm;
+
+      @bottom-right {
+        content: "Hoja " counter(page) " de " counter(pages);
+        font-family: "Arial Narrow", Arial, sans-serif;
+        font-size: 8pt;
+      }
+    }
+
+    body {
+      font-family: "Arial Narrow", Arial, sans-serif;
+      font-size: 8pt;
+      color: #000;
+      margin: 0;
+      padding: 0;
+      position: relative;
+    }
+
+    .encabezado {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #000;
+      padding: 10px 20px;
+      margin-bottom: 10px;
+    }
+
+    .encabezado img {
+      height: 50px;
+    }
+
+    .encabezado-texto {
+      text-align: center;
+      flex: 1;
+      font-size: 9pt;
+      line-height: 1.2;
+    }
+
+    .encabezado-texto strong {
+      display: block;
+      font-size: 11pt;
+      margin-bottom: 3px;
+    }
+
+    .barra-inferior {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 8pt;
+      margin-top: 10px;
+      padding: 0 20px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+      margin-top: 5px;
+      margin-bottom: 10px;
+      font-size: 13pt;
+      text-transform: uppercase;
+      position: relative;
+      z-index: 2;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 8pt;
+      margin: 0 auto;
+      position: relative;
+      z-index: 2;
+    }
+
+    th,
+    td {
+      border: 1px solid #000;
+      padding: 3px 5px;
+      text-align: left;
+    }
+
+    th {
+      font-size: 9pt;
+      text-align: center;
+      background-color: #f8f8f8;
+    }
+
+    .marca-agua {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      opacity: 0.15;
+      z-index: 0;
+      width: 380px;
+      pointer-events: none;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Encabezado -->
+  <div class="encabezado">
+    <img src="{{unc}}" alt="Logo Izquierdo">
+    <div class="encabezado-texto">
+      <strong>UNIVERSIDAD NACIONAL DE CONCEPCIÓN</strong>
+      FACULTAD DE CIENCIAS ECONÓMICAS Y ADMINISTRATIVAS<br>
+      CARRERA DE CONTADURÍA PÚBLICA
+    </div>
+    <img src="{{fcea}}" alt="Logo Derecho">
+  </div>
+
+  <div class="barra-inferior">
+    <div class="empresa">
+      <h3>Empresa: {{empresa}}</h3>
+    </div>
+    <div id="fecha-hora"></div>
+  </div>
+
+  <h1>REPORTE DE COMPRAS</h1>
+
+  <!-- Tabla de ventas -->
+  <table>
+    <thead>
+      <tr>
+        <th>Fecha</th>
+        <th>Proveedor</th>
+        <th>RUC</th>
+        <th>N° Factura</th>
+        <th>Condición</th>
+        <th>Total</th>
+        <th>Sucursal</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each registros}}
+      <tr>
+        <td>{{fecha}}</td>
+        <td>{{proveedor}}</td>
+        <td>{{ruc}}</td>
+        <td>{{numero_factura}}</td>
+        <td>{{condicion}}</td>
+        <td style="text-align: right;">{{total_factura}}</td>
+        <td>{{sucursal}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+
+  <!-- Marca de agua -->
+  <img src="{{marcaAgua}}" class="marca-agua" alt="Marca de agua">
+
+  <script>
+    const ahora = new Date();
+    const opcionesFecha = { day: '2-digit', month: '2-digit', year: 'numeric' };
+    const fecha = ahora.toLocaleDateString('es-PY', opcionesFecha);
+    const hora = ahora.toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' });
+    document.getElementById('fecha-hora').innerHTML = `${fecha}<br>${hora}`;
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>ASIENTOS CONTABLES</title>
+
+  <style>
+    @page {
+      size: A4;
+      margin: 20mm;
+      @bottom-right {
+        content: "Hoja " counter(page) " de " counter(pages);
+        font-family: "Arial Narrow", Arial, sans-serif;
+        font-size: 8pt;
+      }
+    }
+
+    body {
+      font-family: "Arial Narrow", Arial, sans-serif;
+      font-size: 8pt;
+      color: #000;
+      margin: 0;
+      padding: 0;
+      position: relative;
+    }
+
+    /* ENCABEZADO */
+    .encabezado {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #000;
+      padding: 10px 20px;
+      margin-bottom: 10px;
+    }
+
+    .encabezado img {
+      height: 50px;
+    }
+
+    .encabezado-texto {
+      text-align: center;
+      flex: 1;
+      font-size: 9pt;
+      line-height: 1.2;
+    }
+
+    .encabezado-texto strong {
+      display: block;
+      font-size: 11pt;
+      margin-bottom: 3px;
+    }
+
+    .barra-inferior {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 8pt;
+      margin-top: 10px;
+      padding: 0 20px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+      margin-top: 5px;
+      margin-bottom: 10px;
+      font-size: 13pt;
+      text-transform: uppercase;
+      position: relative;
+      z-index: 2;
+    }
+
+    h2 {
+      text-transform: uppercase;
+      font-size: 9pt;
+      border-bottom: 1px solid #000;
+      padding-bottom: 3px;
+      margin: 15px 0 5px 0;
+    }
+
+    .asiento-info {
+      font-size: 8pt;
+      margin-bottom: 5px;
+      padding-left: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 8pt;
+      margin: 0 auto;
+      position: relative;
+      z-index: 2;
+    }
+
+    th, td {
+      border: 1px solid #000;
+      padding: 3px 5px;
+      text-align: left;
+    }
+
+    th {
+      font-size: 9pt;
+      text-align: center;
+      background-color: #f8f8f8;
+    }
+
+    .totales td {
+      font-weight: bold;
+      border-top: 2px solid #000;
+      text-align: right;
+    }
+
+    /* ESTILO DEL MOVIMIENTO */
+    .movimiento-aumento {
+      color: green;
+      font-weight: bold;
+    }
+
+    .movimiento-disminuyo {
+      color: red;
+      font-weight: bold;
+    }
+
+    /* RESUMEN FINAL DE ASIENTO */
+    .resumen {
+      text-align: right;
+      font-size: 8pt;
+      font-style: italic;
+      margin-top: 5px;
+      color: #333;
+    }
+
+    /* MARCA DE AGUA */
+    .marca-agua {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      opacity: 0.15;
+      z-index: 0;
+      width: 380px;
+      pointer-events: none;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Encabezado institucional -->
+  <div class="encabezado">
+    <img src="{{unc}}" alt="Logo Izquierdo">
+    <div class="encabezado-texto">
+      <strong>UNIVERSIDAD NACIONAL DE CONCEPCIÓN</strong>
+      FACULTAD DE CIENCIAS ECONÓMICAS Y ADMINISTRATIVAS<br>
+      CARRERA DE CONTADURÍA PÚBLICA
+    </div>
+    <img src="{{fcea}}" alt="Logo Derecho">
+  </div>
+
+  <div class="barra-inferior">
+    <div><h3>Empresa: {{empresa}}</h3></div>
+    <div id="fecha-hora"></div>
+  </div>
+
+  <h1>ASIENTOS CONTABLES</h1>
+
+  {{#each registros}}
+  <h2>Asiento N° {{numero_asiento}} — {{tipo}}</h2>
+
+  <div class="asiento-info">
+    <strong>Fecha:</strong> {{fecha}}<br>
+    {{#if documento}}<strong>Documento:</strong> {{documento}}<br>{{/if}}
+    {{#if sucursal}}<strong>Sucursal:</strong> {{sucursal}}<br>{{/if}}
+    {{#if concepto}}<strong>Concepto:</strong> {{concepto}}{{/if}}
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Cuenta</th>
+        <th>Descripción</th>
+        <th>Naturaleza</th>
+        <th>Debe (Gs.)</th>
+        <th>Haber (Gs.)</th>
+        <th>Movimiento</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each detalles}}
+      <tr>
+        <td>{{codigo}}</td>
+        <td>{{cuenta}}</td>
+        <td style="text-align:center">{{naturaleza}}</td>
+        <td style="text-align:right">{{debe}}</td>
+        <td style="text-align:right">{{haber}}</td>
+        <td style="text-align:center">
+          {{#if (eq movimiento "AUMENTÓ")}}
+            <span class="movimiento-aumento">{{movimiento}}</span>
+          {{else if (eq movimiento "DISMINUYÓ")}}
+            <span class="movimiento-disminuyo">{{movimiento}}</span>
+          {{else}}
+            {{movimiento}}
+          {{/if}}
+        </td>
+      </tr>
+      {{/each}}
+      <tr class="totales">
+        <td colspan="3">Totales:</td>
+        <td>{{total_debe}}</td>
+        <td>{{total_haber}}</td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="resumen">
+    <strong>Resumen:</strong> {{resumen.aumentaron}} cuentas aumentaron, {{resumen.disminuyeron}} disminuyeron.
+  </div>
+
+  <hr style="margin: 10px 0;">
+  {{/each}}
+
+  <img src="{{marcaAgua}}" class="marca-agua" alt="Marca de agua">
+
+  <script>
+    const ahora = new Date();
+    const opcionesFecha = { day: '2-digit', month: '2-digit', year: 'numeric' };
+    const fecha = ahora.toLocaleDateString('es-PY', opcionesFecha);
+    const hora = ahora.toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' });
+    document.getElementById('fecha-hora').innerHTML = `${fecha}<br>${hora}`;
+  </script>
+</body>
+</html>

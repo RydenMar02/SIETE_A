@@ -68,6 +68,15 @@ const EmpresaCuenta = db.define(
     updatedAt: "updateAt",
   },
 );
+EmpresaCuenta.belongsTo(EmpresaCuenta, {
+    foreignKey: 'id_padre',
+    as: 'cuentaPadre'
+});
+
+EmpresaCuenta.hasMany(EmpresaCuenta, {
+    foreignKey: 'id_padre',
+    as: 'cuentasHijas'
+});
 
 EmpresaCuenta.belongsTo(Empresa, { foreignKey: "id_empresa" });
 
