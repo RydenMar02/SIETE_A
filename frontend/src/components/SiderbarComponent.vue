@@ -12,15 +12,15 @@
   >
     <!-- Perfil / sala / empresa actuales -->
     <div class="border-b border-gray-200">
-      <router-link to="/profile" class="flex items-center gap-2 px-4 py-3 text-sm text-white hover:bg-gray-300 border-b border-gray-200">
+      <router-link to="/perfil" class="flex items-center gap-2 px-4 py-3 text-sm text-white hover:bg-gray-300 border-b border-gray-200">
         <Icon icon="mdi:user" width="22" />
         <span class="truncate">{{ nombre }}</span>
       </router-link>
-      <router-link to="/seleccion_clase" class="flex items-center gap-2 px-4 py-3 text-sm text-white hover:bg-gray-300 border-b border-gray-200">
+      <router-link to="/seleccion" class="flex items-center gap-2 px-4 py-3 text-sm text-white hover:bg-gray-300 border-b border-gray-200">
         <Icon icon="mdi:google-classroom" width="22" />
         <span class="truncate">{{ salaNombre || 'Sin sala seleccionada' }}</span>
       </router-link>
-      <router-link to="/seleccion_clase" class="flex items-center gap-2 px-4 py-3 text-sm text-white hover:bg-gray-300">
+      <router-link to="/seleccion" class="flex items-center gap-2 px-4 py-3 text-sm text-white hover:bg-gray-300">
         <Icon icon="mdi:office-building" width="22" />
         <span class="truncate">{{ empresaNombre || 'Sin empresa seleccionada' }}</span>
       </router-link>
@@ -71,7 +71,7 @@
             v-for="item in grupo.items"
             :key="item.to"
             :to="item.to"
-            class="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded"
+            class="flex items-center gap-2 px-4 py-2 text-sm text-white hover:bg-gray-300 rounded"
           >
             <Icon :icon="item.icono" width="20" />
             {{ item.label }}
@@ -145,11 +145,11 @@ const grupos: GrupoMenu[] = [
     icono: 'mdi:domain',
     roles: [2, 3],
     items: [
-      { label: 'Empresas', icono: 'mdi:office-building', to: '/Company' },
+      { label: 'Empresas', icono: 'mdi:office-building', to: '/empresa' },
       { label: 'Sucursales', icono: 'mdi:office-building-marker', to: '/sucursal' },
       { label: 'Proveedores', icono: 'mdi:box-add', to: '/proveedor' },
-      { label: 'Clientes', icono: 'mdi:account-cash', to: '/client' },
-      { label: 'Cuentas', icono: 'mdi:planner', to: '/account' }
+      { label: 'Clientes', icono: 'mdi:account-cash', to: '/cliente' },
+      { label: 'Cuentas', icono: 'mdi:planner', to: '/cuentas' }
     ]
   },
   {

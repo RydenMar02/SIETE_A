@@ -37,3 +37,19 @@ export const crearCompraVenta = (datos: CompraVentaPayload) =>
 
 export const modificarCompraVenta = (idCompraVenta: number, datos: CompraVentaPayload) =>
   api.put(`/api/comprasventas/${idCompraVenta}`, datos)
+
+// ---------- Listado y anulación ----------
+ 
+export const obtenerComprasVentas = (tipo: TipoComprobante, idEmpresa: number) =>
+  api.get('/api/comprasventas', { params: { tipo, id_empresa: idEmpresa } })
+ 
+export const anularCompraVenta = (idCompraVenta: number) =>
+  api.delete(`/api/comprasventas/${idCompraVenta}`)
+ 
+// Reporte de compras: ruta propia, no sigue el patrón genérico de reportesService.
+export const obtenerUrlReporteComprasPdf = (idEmpresa: number) =>
+  `${import.meta.env.VITE_API_URL}/api/reportescompras/compras/pdf?id_empresa=${idEmpresa}`
+
+// Reporte de ventas: en este caso sí resultó simétrico al de compras.
+export const obtenerUrlReporteVentasPdf = (idEmpresa: number) =>
+  `${import.meta.env.VITE_API_URL}/api/reportesventas/ventas/pdf?id_empresa=${idEmpresa}`

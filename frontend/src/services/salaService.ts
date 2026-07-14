@@ -15,8 +15,8 @@ export interface IngresoSalaPayload {
   id_sala: number
   contrasena: string
   tipo: 'ALUMNO' | 'PROFESOR'
-  idusuario_alumno: number
-  idusuario_docente: number
+  id_alumno: number
+  id_profesor: number
   baja: boolean
   estado: boolean
 }
@@ -60,4 +60,18 @@ export const ingresarASala = (datos: IngresoSalaPayload) =>
 
 // Trae la relación sala-usuario ya existente al seleccionar una sala (no ingresar por contraseña)
 export const obtenerRelacionSalaUsuario = (params: SeleccionSalaParams) =>
-  api.get('/api/salaUsuarios/usuario', { params })
+  api.get('/api/sala-usuarios/usuario', { params })
+
+export const obtenerAlumnosDeSala = (idSala: number, idUsuario: number) =>
+  api.get(`/api/salas/${idSala}/alumnos`, { params: { id_usuario: idUsuario } })
+ 
+// El original usaba DELETE /api/crearsalas/:id, que no coincide con el resto
+// de los endpoints de sala (todos bajo /api/salas). Se corrige acá para
+// seguir el mismo patrón — si el backend todavía expone solo la ruta vieja,
+// avisar para ajustar esta única línea.
+export const eliminarSala = (idSala: number) =>
+  api.delete(`/api/salas/${idSala}`)
+ 
+// Trae las salas creadas por un usuario (profesor), sin filtrar por curso/semestre
+export const obtenerSalasDeUsuario = (idUsuario: number) =>
+  api.get('/api/salas', { params: { id_usuario: idUsuario } })

@@ -157,7 +157,7 @@ import {
 
 // ---------- Props ----------
 interface CuentaProp {
-  idempresa_cuenta?: number
+  id_empresacuenta?: number
   codigo?: string
   nombre?: string
   nombre_alternativo?: string
@@ -185,7 +185,7 @@ const { makeToast, makeConfirm } = useAlertas()
 const seleccion = useSeleccionStore()
 
 const nombreEmpresa = computed(() => seleccion.nombreEmpresa)
-const idEditar = ref<number | null>(props.cuenta?.idempresa_cuenta ?? null)
+const idEditar = ref<number | null>(props.cuenta?.id_empresacuenta ?? null)
 
 // ---------- Formulario ----------
 // Antes había ~10 `computed` casi idénticos, cada uno envolviendo get/set de
