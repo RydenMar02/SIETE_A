@@ -6,6 +6,7 @@ import { create } from 'express-handlebars';
 import CompraVenta from '../models/compraVenta.js';
 import ClienteProveedor from '../models/clienteProveedor.js';
 import Sucursal from '../models/sucursal.js';
+import Empresa from '../models/empresa.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const hbs = create();
@@ -32,6 +33,8 @@ export const getComprasPorEmpresa = async (req, res) => {
 export const reporteComprasPDF = async (req, res) => {
     const { id_empresa } = req.query;
     try {
+        const empresa = await Empresa.findByPk(id_empresa, { attributes: ['nombre'] });
+
         const registros = await CompraVenta.findAll({
             where: { estado: 1, tipo: 'COMPRA' },
             include: [
@@ -62,7 +65,7 @@ export const reporteComprasPDF = async (req, res) => {
         const templateSource = readFileSync(join(__dirname, '../views/reportecompras.handlebars'), 'utf-8');
         const html = hbs.handlebars.compile(templateSource)({
             registros: registrosPlanos,
-            empresa: registros[0]?.ClienteProveedor?.razon_social || 'Sin empresa',
+            empresa: empresa?.nombre || 'Sin empresa',
             marcaAgua: `${baseURL}/images/marcaAgua.png`,
             fcea: `${baseURL}/images/fcea.png`,
             unc: `${baseURL}/images/unc.png`

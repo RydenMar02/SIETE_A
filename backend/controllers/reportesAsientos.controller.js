@@ -46,6 +46,8 @@ export const reporteAsientosPDF = async (req, res) => {
     const { id_empresa } = req.query;
 
     try {
+        const empresa = await Empresa.findByPk(id_empresa, { attributes: ['nombre'] });
+
         const asientos = await AsientoCabecera.findAll({
             where: { id_empresa: parseInt(id_empresa) },
             include: [
@@ -104,7 +106,7 @@ export const reporteAsientosPDF = async (req, res) => {
 
         const html = template({
             registros: registrosPlanos,
-            empresa: asientos[0]?.empresa?.nombre || 'Sin empresa',
+            empresa: empresa?.nombre || 'Sin empresa',
             marcaAgua: `${baseURL}/images/marcaAgua.png`,
             fcea: `${baseURL}/images/fcea.png`,
             unc: `${baseURL}/images/unc.png`,
