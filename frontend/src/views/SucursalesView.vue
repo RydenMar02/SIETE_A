@@ -60,7 +60,7 @@
                 </thead>
                 <tbody>
                   <tr v-for="item in itemsPaginados" :key="item.id_sucursal" class="border-t border-gray-100">
-                    <td class="px-3 py-2">{{ item.codigo_sucursal }}</td>
+                    <td class="px-3 py-2">{{ item.codigo }}</td>
                     <td class="px-3 py-2">{{ item.nombre }}</td>
                     <td class="px-3 py-2">{{ item.nombre_empresa }}</td>
                     <td class="px-3 py-2">{{ item.telefono }}</td>

@@ -19,15 +19,15 @@
             <label for="codigo" class="block text-sm font-medium mb-1.5">Código</label>
             <input
               id="codigo"
-              v-model="form.codigo_sucursal"
+              v-model="form.codigo"
               type="text"
               placeholder="Ej: 001"
               class="w-full bg-white text-gray-900 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2"
-              :class="errores.codigo_sucursal ? 'ring-2 ring-red-500' : 'focus:ring-green-500'"
-              @input="form.codigo_sucursal = form.codigo_sucursal.replace(/[^0-9-]/g, '')"
-              @blur="errores.codigo_sucursal = validarCodigo(form.codigo_sucursal)"
+              :class="errores.codigo ? 'ring-2 ring-red-500' : 'focus:ring-green-500'"
+              @input="form.codigo = form.codigo.replace(/[^0-9-]/g, '')"
+              @blur="errores.codigo = validarCodigo(form.codigo)"
             />
-            <p v-if="errores.codigo_sucursal" class="text-red-300 text-xs mt-1">{{ errores.codigo_sucursal }}</p>
+            <p v-if="errores.codigo" class="text-red-300 text-xs mt-1">{{ errores.codigo }}</p>
           </div>
 
           <!-- Nombre -->
@@ -119,7 +119,7 @@ const esModificacion = computed(() => !!props.sucursal?.id_sucursal)
 
 // ---------- Formulario ----------
 const form = reactive({
-  codigo_sucursal: props.sucursal?.codigo_sucursal ?? '',
+  codigo: props.sucursal?.codigo ?? '',
   nombre: props.sucursal?.nombre ?? '',
   telefono: props.sucursal?.telefono ?? '',
   responsable: props.sucursal?.responsable ?? ''
@@ -150,14 +150,14 @@ const validarResponsable = (valor: string): string => {
   return ''
 }
 
-const errores = reactive({ codigo_sucursal: '', nombre: '', telefono: '', responsable: '' })
+const errores = reactive({ codigo: '', nombre: '', telefono: '', responsable: '' })
 
 const formularioValido = (): boolean => {
-  errores.codigo_sucursal = validarCodigo(form.codigo_sucursal)
+  errores.codigo = validarCodigo(form.codigo)
   errores.nombre = validarNombre(form.nombre)
   errores.telefono = validarTelefono(form.telefono)
   errores.responsable = validarResponsable(form.responsable)
-  return !errores.codigo_sucursal && !errores.nombre && !errores.telefono && !errores.responsable
+  return !errores.codigo && !errores.nombre && !errores.telefono && !errores.responsable
 }
 
 // ---------- Evitar sucursales duplicadas ----------
@@ -178,7 +178,7 @@ const verificarDuplicados = async (): Promise<{ mismoNombre: boolean; mismaCombi
   const mismaCombinacion = sucursalesRegistradas.some(
     (s) =>
       (s.nombre || '').trim().replace(/\s+/g, ' ').toLowerCase() === nombreNormalizado &&
-      s.codigo_sucursal === form.codigo_sucursal
+      s.codigo === form.codigo
   )
 
   return { mismoNombre, mismaCombinacion }
@@ -220,7 +220,7 @@ const guardarOModificar = async () => {
 }
 
 const armarPayload = (): SucursalPayload => ({
-  codigo_sucursal: form.codigo_sucursal,
+  codigo: form.codigo,
   nombre: form.nombre,
   telefono: form.telefono,
   responsable: form.responsable,

@@ -18,14 +18,14 @@ export interface ClienteProveedorPayload {
 }
 
 export interface ClienteProveedorItem {
-  idcliente_proveedor: number
+  id_clienteproveedor: number
   razon_social: string
   numero_identificacion: string
 }
 
 // Forma completa que devuelve el listado (para las vistas de gestión, no solo selects)
 export interface ClienteProveedorDetalle {
-  idcliente_proveedor: number
+  id_clienteproveedor: number
   tipo: TipoClienteProveedor
   razon_social: string
   numero_identificacion: string
@@ -42,16 +42,16 @@ export interface ClienteProveedorDetalle {
 }
 
 export const obtenerClientesProveedores = (tipo: TipoClienteProveedor, idEmpresa: number) =>
-  api.get('/api/clientesproveedores', { params: { tipo, id_empresa: idEmpresa } })
+  api.get('/api/clientes-proveedores', { params: { tipo, id_empresa: idEmpresa } })
 
 export const crearClienteProveedor = (datos: ClienteProveedorPayload) =>
-  api.post('/api/clientesproveedores', datos)
+  api.post('/api/clientes-proveedores', datos)
 
 export const modificarClienteProveedor = (id: number, datos: ClienteProveedorPayload) =>
-  api.put(`/api/clientesproveedores/${id}`, datos)
+  api.put(`/api/clientes-proveedores/${id}`, datos)
 
 export const eliminarClienteProveedor = (id: number) =>
-  api.delete(`/api/clientesproveedores/${id}`)
+  api.delete(`/api/clientes-proveedores/${id}`)
 
 export const obtenerUrlReporteClientesProveedoresPdf = (tipo: TipoClienteProveedor, idEmpresa: number) =>
-  `${import.meta.env.VITE_API_URL}/api/reportesclientes/clientes/pdf?id_empresa=${idEmpresa}&tipo=${tipo}`
+  `${import.meta.env.VITE_API_URL}/api/reportes/clientes/pdf?id_empresa=${idEmpresa}&tipo=${tipo}`

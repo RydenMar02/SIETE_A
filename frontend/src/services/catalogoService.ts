@@ -6,24 +6,24 @@ import api from './api'
 export const TIPOS_DOCUMENTO = ['RUC', 'CI', 'PASAPORTE', 'DNI', 'RIF', 'NO_RESIDENTE'] as const
 export type TipoDocumento = typeof TIPOS_DOCUMENTO[number]
 
-export const TIPOS_CONTRIBUYENTE = ['PERSONA_FISICA', 'PERSONA_JURIDICA', 'NO_CONTRIBUYENTE', 'DE_ESTADO'] as const
+export const TIPOS_CONTRIBUYENTE = ['PERSONA_FISICA', 'PERSONA_JURIDICA', 'NO_CONTRIBUYENTE', 'JURIDICA_ESTADO'] as const
 export type TipoContribuyente = typeof TIPOS_CONTRIBUYENTE[number]
 
 // Etiquetas legibles para mostrar en el <select> sin tocar el valor que viaja a la API
 export const ETIQUETAS_TIPO_DOCUMENTO: Record<TipoDocumento, string> = {
   RUC: 'RUC',
-  CI: 'Cédula de Identidad',
-  PASAPORTE: 'Pasaporte',
+  CI: 'CI',
+  PASAPORTE: 'PASAPORTE',
   DNI: 'DNI',
   RIF: 'RIF',
-  NO_RESIDENTE: 'No residente'
+  NO_RESIDENTE: 'NO RESIDENTE'
 }
 
 export const ETIQUETAS_TIPO_CONTRIBUYENTE: Record<TipoContribuyente, string> = {
-  PERSONA_FISICA: 'Persona física',
-  PERSONA_JURIDICA: 'Persona jurídica',
-  NO_CONTRIBUYENTE: 'No contribuyente',
-  DE_ESTADO: 'De estado'
+  PERSONA_FISICA: 'PERSONA FISICA',
+  PERSONA_JURIDICA: 'PERSONA JURIDICA',
+  NO_CONTRIBUYENTE: 'NO CONTRIBUYENTE',
+  JURIDICA_ESTADO: 'JURIDICA ESTADO'
 }
 
 // Ciudades sigue siendo una tabla real en la base de datos

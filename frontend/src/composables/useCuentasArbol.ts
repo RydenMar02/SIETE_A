@@ -1,9 +1,7 @@
 import type { CuentaEstructuraRaw, CuentaAplanada } from '@/services/cuentaService'
 
 // Compara códigos jerárquicos tipo "1.10" vs "1.9" segmento por segmento
-// como números. Un orden alfabético simple pondría "1.10" antes que "1.9"
-// (porque "1" < "9" como caracteres), lo cual queda mal para un plan de
-// cuentas — acá se comparan como números reales en cada nivel.
+// como números, para que "1.9" quede antes que "1.10".
 function compararCodigos (a: CuentaEstructuraRaw, b: CuentaEstructuraRaw): number {
   const partesA = a.codigo.split('.').map(Number)
   const partesB = b.codigo.split('.').map(Number)
@@ -18,8 +16,8 @@ function compararCodigos (a: CuentaEstructuraRaw, b: CuentaEstructuraRaw): numbe
 }
 
 // Convierte un árbol de cuentas (con cuentasHijas anidadas) en una lista plana,
-// ordenada por código y conservando el nivel de indentación para mostrarlo
-// visualmente en una tabla.
+// ordenada por código y con el nivel de indentación para mostrarla en tabla.
+//
 export function aplanarCuentas (
   cuentas: CuentaEstructuraRaw[],
   nivel = 0,
@@ -30,7 +28,7 @@ export function aplanarCuentas (
   return ordenadas.flatMap((c) => {
     const { cuentasHijas, ...resto } = c
     const actual: CuentaAplanada = { ...resto, nivelIndentado: nivel, id_padre: idPadre }
-    const hijas = cuentasHijas?.length ? aplanarCuentas(cuentasHijas, nivel + 1, c.id_cuenta) : []
+    const hijas = cuentasHijas?.length ? aplanarCuentas(cuentasHijas, nivel + 1, c.id_empresacuenta) : []
     return [actual, ...hijas]
   })
 }

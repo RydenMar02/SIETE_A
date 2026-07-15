@@ -139,7 +139,7 @@ const ciudades = ref<Ciudad[]>([])
 const cargarCiudades = async () => {
   try {
     const { data } = await obtenerCiudades()
-    ciudades.value = data.ciudades ?? []
+    ciudades.value = data ?? []
   } catch (error) {
     console.error(error)
     makeToast('No se pudieron cargar las ciudades.', 'error')
@@ -164,7 +164,7 @@ const idEditar = ref<number | null>(null)
 const cargarDatosDeEdicion = () => {
   if (!props.itemEditar) return
 
-  idEditar.value = props.itemEditar.idcliente_proveedor ?? null
+  idEditar.value = props.itemEditar.id_clienteproveedor ?? null
   Object.assign(form, {
     razon_social: props.itemEditar.razon_social ?? '',
     numero_identificacion: props.itemEditar.numero_identificacion ?? '',
@@ -188,12 +188,29 @@ const pedirCerrar = () => {
   })
 }
 
+const validarFormatoIdentificacion = (): boolean => {
+  const valor = form.numero_identificacion.trim()
+
+  if (form.tipo_documento === 'RUC') {
+    // Formato esperado: número-dígito verificador, ej. 5868524-1
+    const regexRuc = /^\d+-\d$/
+    if (!regexRuc.test(valor)) {
+      makeToast('El RUC debe tener el formato número-dígito verificador (ej: 5868524-1).', 'warning')
+      return false
+    }
+  }
+
+  return true
+}
+
 // ---------- Guardar / modificar ----------
 const guardar = async () => {
   if (!form.tipo_documento || !form.tipo_contribuyente) {
     makeToast('Seleccioná tipo de documento y contribuyente.', 'warning')
     return
   }
+
+   if (!validarFormatoIdentificacion()) return
 
   const payload: ClienteProveedorPayload = {
     tipo: props.tipo,

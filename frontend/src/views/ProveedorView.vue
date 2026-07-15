@@ -68,7 +68,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="item in proveedoresPaginados" :key="item.idcliente_proveedor" class="border-t border-gray-100">
+                  <tr v-for="item in proveedoresPaginados" :key="item.id_clienteproveedor" class="border-t border-gray-100">
                     <td class="px-3 py-2">{{ ETIQUETAS_TIPO_DOCUMENTO[item.tipo_documento] }}</td>
                     <td class="px-3 py-2">{{ item.numero_identificacion }}</td>
                     <td class="px-3 py-2">{{ ETIQUETAS_TIPO_CONTRIBUYENTE[item.tipo_contribuyente] }}</td>
@@ -216,7 +216,7 @@ const eliminarProveedor = async (item: ClienteProveedorDetalle) => {
   if (!confirmacion.isConfirmed) return
 
   try {
-    await eliminarClienteProveedor(item.idcliente_proveedor)
+    await eliminarClienteProveedor(item.id_clienteproveedor)
     makeToast('Se eliminó correctamente.', 'success')
     obtenerProveedores()
   } catch (error) {

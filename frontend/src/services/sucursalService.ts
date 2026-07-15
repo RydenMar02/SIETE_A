@@ -12,7 +12,7 @@ export const obtenerSucursales = (idEmpresa: number) =>
 
 export interface SucursalDetalle {
   id_sucursal: number
-  codigo_sucursal: string
+  codigo: string
   nombre: string
   id_empresa?: number
   nombre_empresa?: string
@@ -21,7 +21,7 @@ export interface SucursalDetalle {
 }
 
 export interface SucursalPayload {
-  codigo_sucursal: string
+  codigo: string
   nombre: string
   id_empresa: number
   telefono: string

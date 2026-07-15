@@ -31,7 +31,7 @@
             <label class="block text-sm font-medium mb-1.5">{{ tipo === 'COMPRA' ? 'Proveedor' : 'Cliente' }}</label>
             <select v-model="form.idcliente_proveedor" class="w-full bg-white text-gray-900 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500">
               <option disabled value="0">Seleccionar</option>
-              <option v-for="p in tercerosDisponibles" :key="p.idcliente_proveedor" :value="p.idcliente_proveedor">
+              <option v-for="p in tercerosDisponibles" :key="p.id_clienteproveedor" :value="p.id_clienteproveedor">
                 {{ p.razon_social }} - {{ p.numero_identificacion }}
               </option>
             </select>
@@ -310,9 +310,9 @@ const form = reactive({
   descripcion_iva10: '',
   descripcion_iva5: '',
   fecha_vencimiento: '',
-  idcuenta_exenta: '' as number | string,
-  idcuenta_iva10: '' as number | string,
-  idcuenta_iva5: '' as number | string
+  id_cuentaexenta: '' as number | string,
+  id_cuentaiva10: '' as number | string,
+  id_cuentaiva5: '' as number | string
 })
 
 const idEditar = ref<number | null>(null)
@@ -334,17 +334,17 @@ const validarCodigosCuenta = async () => {
   nombreCuentaIva10.value = grav10?.nombre ?? ''
   nombreCuentaIva05.value = grav05?.nombre ?? ''
 
-  form.idcuenta_exenta = exenta?.idempresa_cuenta ?? ''
-  form.idcuenta_iva10 = grav10?.idempresa_cuenta ?? ''
-  form.idcuenta_iva5 = grav05?.idempresa_cuenta ?? ''
+  form.id_cuentaexenta = exenta?.id_empresacuenta ?? ''
+  form.id_cuentaiva10 = grav10?.id_empresacuenta ?? ''
+  form.id_cuentaiva5 = grav05?.id_empresacuenta ?? ''
 }
 
 const resolverCuenta = async (codigo: string): Promise<Cuenta | null> => {
   if (!codigo?.trim()) return null
   try {
     const { data } = await validarCuentaPorCodigo(codigo.trim(), seleccion.idEmpresa)
-    if (!data?.idempresa_cuenta) return null
-    return { idempresa_cuenta: data.idempresa_cuenta, id_cuenta: data.idcuenta, nombre: data.nombre, codigo: data.codigo }
+    if (!data?.id_empresacuenta) return null
+    return { id_empresacuenta: data.id_empresacuenta, id_cuenta: data.idcuenta, nombre: data.nombre, codigo: data.codigo }
   } catch (error) {
     console.error(`Error al validar cuenta ${codigo}:`, error)
     return null
@@ -483,7 +483,7 @@ const registrar = async () => {
     tipo: props.tipo,
     id_empresa: seleccion.idEmpresa,
     id_sucursal: Number(form.id_sucursal),
-    idcliente_proveedor: Number(form.idcliente_proveedor),
+    id_clienteproveedor: Number(form.idcliente_proveedor),
     numero_factura: form.numero_factura.trim(),
     numero_timbrado: toNumberSafe(form.numero_timbrado) ?? 0,
     tipo_de_factura: toUpperSafe(form.tipo_de_factura),
@@ -500,9 +500,9 @@ const registrar = async () => {
     base_imp_iva_05: toNumberSafe(form.base_imp_iva_05) ?? 0,
     importe_iva_10: toNumberSafe(form.importe_iva_10) ?? 0,
     importe_iva_05: toNumberSafe(form.importe_iva_05) ?? 0,
-    cuenta_exenta: Number(form.idcuenta_exenta) || null,
-    cuenta_grav10: Number(form.idcuenta_iva10) || null,
-    cuenta_grav05: Number(form.idcuenta_iva5) || null,
+    id_cuentaexenta: Number(form.id_cuentaexenta) || null,
+    id_cuentagrav10: Number(form.id_cuentaiva10) || null,
+    id_cuentagrav05: Number(form.id_cuentaiva5) || null,
     descripcion_exenta: form.descripcion_exenta.trim(),
     descripcion_iva10: form.descripcion_iva10.trim(),
     descripcion_iva5: form.descripcion_iva5.trim(),

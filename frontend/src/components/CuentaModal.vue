@@ -13,14 +13,15 @@
 
       <form class="flex flex-col gap-4" @submit.prevent="guardar">
 
-        <!-- Empresa / nivel / jerarquía -->
-        <div class="grid sm:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium mb-1.5">Empresa</label>
-            <input :value="nombreEmpresa" readonly type="text" class="w-full bg-slate-600 text-slate-300 rounded-lg px-3 py-2.5 cursor-not-allowed" />
-          </div>
+        <!-- Empresa: fila propia, igual que el sistema anterior -->
+        <div>
+          <label class="block text-sm font-medium mb-1.5">Empresa</label>
+          <input :value="nombreEmpresa" readonly type="text" class="w-full bg-slate-600 text-slate-300 rounded-lg px-3 py-2.5 cursor-not-allowed" />
+        </div>
 
-          <div>
+        <!-- Nivel / Grupo / Sub grupo: siempre visibles, se habilitan progresivamente -->
+        <div class="grid grid-cols-1 sm:grid-cols-12 gap-4">
+          <div class="sm:col-span-2">
             <label for="nivel" class="block text-sm font-medium mb-1.5">Nivel</label>
             <select id="nivel" v-model="nivel" class="w-full bg-white text-gray-900 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-500">
               <option :value="0" disabled>Seleccionar</option>
@@ -28,35 +29,38 @@
             </select>
           </div>
 
-          <div v-if="habilitarGrupo">
+          <div class="sm:col-span-5">
             <label for="grupo" class="block text-sm font-medium mb-1.5">Grupo</label>
-            <select id="grupo" v-model="grupoSeleccionado" class="w-full bg-white text-gray-900 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-500">
+            <select id="grupo" v-model="grupoSeleccionado" :disabled="!habilitarGrupo" class="w-full bg-white text-gray-900 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-slate-200 disabled:text-gray-400 disabled:cursor-not-allowed">
               <option :value="null" disabled>Seleccionar</option>
-              <option v-for="g in grupos" :key="g.idcuenta" :value="g.idcuenta">{{ g.nombre }}</option>
+              <option v-for="g in grupos" :key="g.id_empresacuenta" :value="g.id_empresacuenta">{{ g.nombre }}</option>
             </select>
           </div>
 
-          <div v-if="habilitarSubGrupo">
+          <div class="sm:col-span-5">
             <label for="subgrupo" class="block text-sm font-medium mb-1.5">Sub grupo</label>
-            <select id="subgrupo" v-model="subgrupoSeleccionado" class="w-full bg-white text-gray-900 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-500">
+            <select id="subgrupo" v-model="subgrupoSeleccionado" :disabled="!habilitarSubGrupo" class="w-full bg-white text-gray-900 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-slate-200 disabled:text-gray-400 disabled:cursor-not-allowed">
               <option :value="null" disabled>Seleccionar</option>
-              <option v-for="sg in subGrupos" :key="sg.idcuenta" :value="sg.idcuenta">{{ sg.nombre }}</option>
+              <option v-for="sg in subGrupos" :key="sg.id_empresacuenta" :value="sg.id_empresacuenta">{{ sg.nombre }}</option>
             </select>
           </div>
+        </div>
 
-          <div v-if="habilitarCuentaPrincipal">
+        <!-- Cuenta principal / Sub cuenta: misma lógica -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
             <label for="cuentaPrincipal" class="block text-sm font-medium mb-1.5">Cuenta principal</label>
-            <select id="cuentaPrincipal" v-model="cuentaPrincipalSeleccionada" class="w-full bg-white text-gray-900 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-500">
+            <select id="cuentaPrincipal" v-model="cuentaPrincipalSeleccionada" :disabled="!habilitarCuentaPrincipal" class="w-full bg-white text-gray-900 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-slate-200 disabled:text-gray-400 disabled:cursor-not-allowed">
               <option :value="null" disabled>Seleccionar</option>
-              <option v-for="cp in cuentasPrincipales" :key="cp.idcuenta" :value="cp.idcuenta">{{ cp.nombre }}</option>
+              <option v-for="cp in cuentasPrincipales" :key="cp.id_empresacuenta" :value="cp.id_empresacuenta">{{ cp.nombre }}</option>
             </select>
           </div>
 
-          <div v-if="habilitarSubCuenta">
+          <div>
             <label for="subcuenta" class="block text-sm font-medium mb-1.5">Sub cuenta</label>
-            <select id="subcuenta" v-model="subcuentaSeleccionada" class="w-full bg-white text-gray-900 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-500">
+            <select id="subcuenta" v-model="subcuentaSeleccionada" :disabled="!habilitarSubCuenta" class="w-full bg-white text-gray-900 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-slate-200 disabled:text-gray-400 disabled:cursor-not-allowed">
               <option :value="null" disabled>Seleccionar</option>
-              <option v-for="sc in subCuentas" :key="sc.idcuenta" :value="sc.idcuenta">{{ sc.nombre }}</option>
+              <option v-for="sc in subCuentas" :key="sc.id_empresacuenta" :value="sc.id_empresacuenta">{{ sc.nombre }}</option>
             </select>
           </div>
         </div>
@@ -85,7 +89,7 @@
             <p v-if="errores.nombre" class="text-red-300 text-xs mt-1">{{ errores.nombre }}</p>
           </div>
 
-          <div class="lg:col-span-2">
+          <div>
             <label for="nombreAlternativo" class="block text-sm font-medium mb-1.5">Nombre alternativo</label>
             <input id="nombreAlternativo" v-model="form.nombre_alternativo" type="text" maxlength="100" class="w-full bg-white text-gray-900 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-500" />
           </div>
@@ -103,8 +107,8 @@
             <label for="asentable" class="block text-sm font-medium mb-1.5">Asentable</label>
             <select id="asentable" v-model="form.asentable" class="w-full bg-white text-gray-900 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2" :class="errores.asentable ? 'ring-2 ring-red-500' : 'focus:ring-green-500'">
               <option value="">Seleccionar</option>
-              <option value="SI">Sí</option>
-              <option value="NO">No</option>
+              <option value="Si">Sí</option>
+              <option value="No">No</option>
             </select>
           </div>
 
@@ -113,7 +117,7 @@
             <select id="moneda" v-model="form.moneda" class="w-full bg-white text-gray-900 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2" :class="errores.moneda ? 'ring-2 ring-red-500' : 'focus:ring-green-500'">
               <option value="">Seleccionar</option>
               <option value="LOCAL">Local</option>
-              <option value="DOLAR">Dólar</option>
+              <option value="EXTRANJERA">Extranjera</option>
             </select>
           </div>
 
@@ -188,8 +192,6 @@ const nombreEmpresa = computed(() => seleccion.nombreEmpresa)
 const idEditar = ref<number | null>(props.cuenta?.id_empresacuenta ?? null)
 
 // ---------- Formulario ----------
-// Antes había ~10 `computed` casi idénticos, cada uno envolviendo get/set de
-// `cuentas.value.X`. Un solo objeto reactivo hace lo mismo con menos código.
 const form = reactive({
   nombre: props.cuenta?.nombre ?? '',
   nombre_alternativo: props.cuenta?.nombre_alternativo ?? '',
@@ -239,6 +241,8 @@ const cuentaPrincipalSeleccionada = ref<number | null>(null)
 const subcuentaSeleccionada = ref<number | null>(null)
 const subsubcuentaSeleccionada = ref<number | null>(null)
 
+// Estos ya no controlan si el <select> existe en el DOM (antes con v-if),
+// solo si está habilitado (:disabled) — igual que en el sistema anterior.
 const habilitarGrupo = computed(() => nivel.value >= 2)
 const habilitarSubGrupo = computed(() => nivel.value >= 3 && !!grupoSeleccionado.value)
 const habilitarCuentaPrincipal = computed(() => nivel.value >= 4 && !!subgrupoSeleccionado.value)
@@ -357,9 +361,6 @@ const pedirCerrar = () => {
 }
 
 // ---------- Guardar / modificar ----------
-// `modificar()` del archivo original nunca se llamaba desde ningún lado y
-// apuntaba a un endpoint sin ID (`PUT /api/empresascuentas`, sin `/:id`) —
-// código muerto y roto a la vez. `guardar()` ya cubre alta y edición.
 const guardar = async () => {
   if (!formularioValido()) {
     makeToast('Por favor corrija los campos marcados.', 'warning')
@@ -377,7 +378,7 @@ const guardar = async () => {
     nivel: nivel.value,
     estado: true,
     pordefecto: false,
-    idempresa: seleccion.idEmpresa
+    id_empresa: seleccion.idEmpresa
   }
 
   try {
