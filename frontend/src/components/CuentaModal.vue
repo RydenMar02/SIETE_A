@@ -33,7 +33,7 @@
             <label for="grupo" class="block text-sm font-medium mb-1.5">Grupo</label>
             <select id="grupo" v-model="grupoSeleccionado" :disabled="!habilitarGrupo" class="w-full bg-white text-gray-900 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-slate-200 disabled:text-gray-400 disabled:cursor-not-allowed">
               <option :value="null" disabled>Seleccionar</option>
-              <option v-for="g in grupos" :key="g.id_empresacuenta" :value="g.id_empresacuenta">{{ g.nombre }}</option>
+              <option v-for="g in grupos" :key="g.id_cuenta" :value="g.id_cuenta">{{ g.nombre }}</option>
             </select>
           </div>
 
@@ -41,7 +41,7 @@
             <label for="subgrupo" class="block text-sm font-medium mb-1.5">Sub grupo</label>
             <select id="subgrupo" v-model="subgrupoSeleccionado" :disabled="!habilitarSubGrupo" class="w-full bg-white text-gray-900 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-slate-200 disabled:text-gray-400 disabled:cursor-not-allowed">
               <option :value="null" disabled>Seleccionar</option>
-              <option v-for="sg in subGrupos" :key="sg.id_empresacuenta" :value="sg.id_empresacuenta">{{ sg.nombre }}</option>
+              <option v-for="sg in subGrupos" :key="sg.id_cuenta" :value="sg.id_cuenta">{{ sg.nombre }}</option>
             </select>
           </div>
         </div>
@@ -52,7 +52,7 @@
             <label for="cuentaPrincipal" class="block text-sm font-medium mb-1.5">Cuenta principal</label>
             <select id="cuentaPrincipal" v-model="cuentaPrincipalSeleccionada" :disabled="!habilitarCuentaPrincipal" class="w-full bg-white text-gray-900 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-slate-200 disabled:text-gray-400 disabled:cursor-not-allowed">
               <option :value="null" disabled>Seleccionar</option>
-              <option v-for="cp in cuentasPrincipales" :key="cp.id_empresacuenta" :value="cp.id_empresacuenta">{{ cp.nombre }}</option>
+              <option v-for="cp in cuentasPrincipales" :key="cp.id_cuenta" :value="cp.id_cuenta">{{ cp.nombre }}</option>
             </select>
           </div>
 
@@ -60,7 +60,7 @@
             <label for="subcuenta" class="block text-sm font-medium mb-1.5">Sub cuenta</label>
             <select id="subcuenta" v-model="subcuentaSeleccionada" :disabled="!habilitarSubCuenta" class="w-full bg-white text-gray-900 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-slate-200 disabled:text-gray-400 disabled:cursor-not-allowed">
               <option :value="null" disabled>Seleccionar</option>
-              <option v-for="sc in subCuentas" :key="sc.id_empresacuenta" :value="sc.id_empresacuenta">{{ sc.nombre }}</option>
+              <option v-for="sc in subCuentas" :key="sc.id_cuenta" :value="sc.id_cuenta">{{ sc.nombre }}</option>
             </select>
           </div>
         </div>
@@ -107,8 +107,8 @@
             <label for="asentable" class="block text-sm font-medium mb-1.5">Asentable</label>
             <select id="asentable" v-model="form.asentable" class="w-full bg-white text-gray-900 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2" :class="errores.asentable ? 'ring-2 ring-red-500' : 'focus:ring-green-500'">
               <option value="">Seleccionar</option>
-              <option value="Si">Sí</option>
-              <option value="No">No</option>
+              <option value="SI">Sí</option>
+              <option value="NO">No</option>
             </select>
           </div>
 
@@ -117,7 +117,7 @@
             <select id="moneda" v-model="form.moneda" class="w-full bg-white text-gray-900 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2" :class="errores.moneda ? 'ring-2 ring-red-500' : 'focus:ring-green-500'">
               <option value="">Seleccionar</option>
               <option value="LOCAL">Local</option>
-              <option value="EXTRANJERA">Extranjera</option>
+              <option value="DOLAR">Dólar</option>
             </select>
           </div>
 
@@ -152,7 +152,6 @@ import { useAlertas } from '@/composables/useAlertas'
 import { useSeleccionStore } from '@/stores/useSeleccionStore'
 import {
   filtrarCuentasPorNivel,
-  obtenerCuentaEmpresaPorId,
   crearCuentaEmpresa,
   modificarCuentaEmpresa,
   type CuentaFiltrada,
@@ -294,7 +293,21 @@ const generarCodigo = async (nivelActual: number) => {
     const idPadre = idPadrePorNivel[nivelActual]
     if (!idPadre) return
 
-    const { data: padre } = await obtenerCuentaEmpresaPorId(idPadre)
+    // Antes se pedía la cuenta padre al backend con obtenerCuentaEmpresaPorId
+    // (que hace findByPk, y necesita id_empresacuenta). Pero acá idPadre es
+    // id_cuenta (la convención real de la jerarquía, confirmada por el
+    // sourceKey de la asociación Sequelize) — así que en vez de pedirle al
+    // backend algo que no puede resolver con ese ID, buscamos el código del
+    // padre en la lista del nivel anterior, que ya tenemos cargada en memoria.
+    const listaPorNivel: Record<number, CuentaFiltrada[]> = {
+      2: grupos.value,
+      3: subGrupos.value,
+      4: cuentasPrincipales.value,
+      5: subCuentas.value
+    }
+    const padre = listaPorNivel[nivelActual].find((c) => c.id_cuenta === idPadre)
+    if (!padre) return
+
     const { data: hijosRes } = await filtrarCuentasPorNivel(nivelActual, seleccion.idEmpresa, idPadre)
     const hijos: CuentaFiltrada[] = hijosRes.cuentas ?? []
 

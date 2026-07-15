@@ -5,7 +5,7 @@
     <div class="flex flex-1">
       <Siderbar />
 
-      <main class="flex-1 overflow-auto bg-gray-50">
+      <main class="flex-1 overflow-auto bg-slate-100">
         <div class="max-w-4xl mx-auto px-4 sm:px-6 py-8">
 
           <CambiarContra v-if="mostrarModal" @cerrar="mostrarModal = false" />

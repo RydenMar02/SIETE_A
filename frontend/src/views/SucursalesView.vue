@@ -5,7 +5,7 @@
     <div class="flex flex-1">
       <Siderbar />
 
-      <main class="flex-1 overflow-auto bg-gray-50">
+      <main class="flex-1 overflow-auto bg-slate-100">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 py-8">
 
           <ModalSucursal
@@ -22,7 +22,7 @@
           </div>
 
           <!-- Barra de búsqueda y acciones -->
-          <div class="flex flex-wrap items-center gap-3 bg-white rounded-xl shadow-sm px-4 py-3 mb-4">
+          <div class="flex flex-wrap items-center gap-3 bg-white rounded-xl shadow-md border border-gray-200 px-4 py-3 mb-4">
             <div class="flex items-center gap-2 flex-1 min-w-[240px]">
               <i class="ti ti-search text-gray-400 text-lg"></i>
               <input
@@ -44,10 +44,10 @@
           </div>
 
           <!-- Tabla -->
-          <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+          <div class="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
             <div class="overflow-x-auto">
               <table class="w-full text-sm">
-                <thead class="bg-slate-100 text-gray-700">
+                <thead class="bg-slate-700 text-white">
                   <tr>
                     <th class="text-left px-3 py-2">Código</th>
                     <th class="text-left px-3 py-2">Sucursal</th>
@@ -59,7 +59,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="item in itemsPaginados" :key="item.id_sucursal" class="border-t border-gray-100">
+                  <tr v-for="item in itemsPaginados" :key="item.id_sucursal" class="border-b border-gray-100 odd:bg-white even:bg-slate-100 hover:bg-green-50 transition-colors">
                     <td class="px-3 py-2">{{ item.codigo }}</td>
                     <td class="px-3 py-2">{{ item.nombre }}</td>
                     <td class="px-3 py-2">{{ item.nombre_empresa }}</td>

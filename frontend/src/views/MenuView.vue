@@ -5,7 +5,7 @@
     <div class="flex flex-1">
       <Siderbar />
 
-      <main class="flex-1 overflow-auto bg-gray-50">
+      <main class="flex-1 overflow-auto bg-slate-100">
       <div class="max-w-6xl mx-auto px-4 sm:px-6 py-8">
 
         <!-- Bienvenida -->
@@ -32,7 +32,7 @@
         <!-- Accesos rápidos -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <router-link
-            to="/asientos"
+            to="/asiento"
             class="bg-white hover:bg-gray-50 border border-gray-200 rounded-xl shadow-sm py-3 flex items-center justify-center gap-2 text-blue-600 font-medium transition"
           >
             <Icon icon="mdi:plus-box" width="20" height="20" />
@@ -130,7 +130,7 @@ import { useAlertas } from '@/composables/useAlertas'
 import { useSesionStore } from '@/stores/useSesionStore'
 import { useSeleccionStore } from '@/stores/useSeleccionStore'
 import { obtenerTopDatos as obtenerTopDatosService } from '@/services/graficosService'
-import { obtenerUrlReportePdf, type TipoReporte } from '@/services/reportesService'
+import { abrirReportePdf, type TipoReporte } from '@/services/reportesService'
 
 ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, ArcElement)
 
@@ -149,10 +149,10 @@ const fechaActual = ref('')
 // ---------- Tarjetas resumen ----------
 // Hoy son datos fijos (ref con valor inicial); cuando conectes la API real
 // de cada uno, solo cambiás el valor de estos refs, el template no se toca.
-const totalAsientos = ref(12)
-const totalCuentas = ref(5)
-const balanceActual = ref('$4,500')
-const ultimosMovimientos = ref(4)
+const totalAsientos = ref(0)
+const totalCuentas = ref(333)
+const balanceActual = ref('0')
+const ultimosMovimientos = ref(0)
 
 const tarjetasResumen = computed(() => [
   { etiqueta: 'Asientos registrados', valor: totalAsientos.value, icono: 'mdi:cash', color: 'text-green-600' },
@@ -276,23 +276,27 @@ const fetchProveedores = async () => {
 }
 
 const fetchAllData = () => Promise.all([fetchSucursales(), fetchClientes(), fetchProveedores()])
-
 // ---------- Reportes PDF ----------
-// Las 3 funciones de "ver libro/balance" eran la misma lógica copiada 3 veces,
-// solo cambiando el endpoint. Quedan reducidas a una función genérica + 3 llamadas cortas.
-const abrirReportePDF = (tipo: TipoReporte, nombreReporte: string) => {
+// abrirReportePdf hace la petición autenticada (con token) y arma el blob,
+// necesario porque estas rutas están protegidas por validarJWT — un
+// window.open directo a la URL no llevaría el Authorization y daría 401.
+
+const abrirReporte = async (tipo: TipoReporte, nombreReporte: string) => {
   if (!idEmpresa.value) {
     makeAlert('Error', 'No se encontró el ID de la empresa logueada.', 'warning')
     return
   }
-  const url = obtenerUrlReportePdf(tipo, idEmpresa.value)
-  console.log(`URL PDF ${nombreReporte} generada:`, url)
-  window.open(url, '_blank')
+  try {
+    await abrirReportePdf(tipo, idEmpresa.value)
+  } catch (error) {
+    console.error(`Error al generar el PDF de ${nombreReporte}:`, error)
+    makeAlert('Error', `No hay registros para generar el ${nombreReporte}.`, 'error')
+  }
 }
 
-const verLibroDiario = () => abrirReportePDF('reporteslibrodiario', 'Libro Diario')
-const verLibroMayor = () => abrirReportePDF('reporteslibromayor', 'Libro Mayor')
-const verBalanceSumasYSaldos = () => abrirReportePDF('reportesbalancesumas', 'Balance de Sumas y Saldos')
+const verLibroDiario = () => abrirReporte('libro-diario', 'Libro Diario')
+const verLibroMayor = () => abrirReporte('libro-mayor', 'Libro Mayor')
+const verBalanceSumasYSaldos = () => abrirReporte('balance-sumas', 'Balance de Sumas y Saldos')
 
 // ---------- Montaje ----------
 onMounted(() => {

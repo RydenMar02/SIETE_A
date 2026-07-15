@@ -1,5 +1,5 @@
 <template>
-  <section class="min-h-screen flex items-center bg-gray-50">
+  <section class="min-h-screen flex items-center bg-slate-100">
     <div class="max-w-5xl mx-auto px-6 py-12 w-full">
       <div class="grid md:grid-cols-2 gap-8 items-center">
 

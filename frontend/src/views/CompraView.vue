@@ -5,7 +5,7 @@
     <div class="flex flex-1">
       <Siderbar />
 
-      <main class="flex-1 overflow-auto bg-gray-50">
+      <main class="flex-1 overflow-auto bg-slate-100">
         <div class="max-w-[1600px] mx-auto px-4 sm:px-6 py-8">
 
           <CompraVentaModal
@@ -22,7 +22,7 @@
           </div>
 
           <!-- Barra de búsqueda y acciones -->
-          <div class="flex flex-wrap items-center gap-3 bg-white rounded-xl shadow-sm px-4 py-3 mb-4">
+          <div class="flex flex-wrap items-center gap-3 bg-white rounded-xl shadow-md border border-gray-200 px-4 py-3 mb-4">
             <div class="flex items-center gap-2 flex-1 min-w-[240px]">
               <i class="ti ti-search text-gray-400 text-lg"></i>
               <input
@@ -50,10 +50,10 @@
           </div>
 
           <!-- Tabla -->
-          <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+         <div class="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
             <div class="overflow-x-auto">
               <table class="w-full text-sm">
-                <thead class="bg-slate-100 text-gray-700">
+                <thead class="bg-slate-700 text-white">
                   <tr>
                     <th class="text-left px-3 py-2 whitespace-nowrap">Sucursal</th>
                     <th class="text-left px-3 py-2 whitespace-nowrap">Fecha</th>
@@ -79,7 +79,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="item in itemsPaginados" :key="item.id_compra" class="border-t border-gray-100">
+                  <tr v-for="item in itemsPaginados" :key="item.id_compra" class="border-b border-gray-100 odd:bg-white even:bg-slate-100 hover:bg-green-50 transition-colors">
                     <td class="px-3 py-2 whitespace-nowrap">{{ item.nombre_sucursal }}</td>
                     <td class="px-3 py-2 whitespace-nowrap">{{ item.fecha }}</td>
                     <td class="px-3 py-2 whitespace-nowrap">{{ item.numero_identificacion }}</td>
@@ -142,10 +142,9 @@ import Siderbar from '@/components/SiderbarComponent.vue'
 import CompraVentaModal from '@/components/CompraVentaModal.vue'
 import {
   obtenerComprasVentas,
-  anularCompraVenta,
-  obtenerUrlReporteComprasPdf
+  anularCompraVenta
 } from '@/services/compraVentaService'
-
+import { abrirReportePdf } from '@/services/reportesService'
 const { makeToast, makeConfirm } = useAlertas()
 const seleccion = useSeleccionStore()
 
@@ -321,13 +320,18 @@ const anularCompra = (item: CompraListado) => {
 }
 
 // ---------- Reporte PDF ----------
-const generarPdf = () => {
+
+const generarPdf = async () => {
   if (!seleccion.idEmpresa) {
     makeToast('No se encontró la empresa logueada.', 'warning')
     return
   }
-  window.open(obtenerUrlReporteComprasPdf(seleccion.idEmpresa), '_blank')
+  try {
+    await abrirReportePdf('compras', seleccion.idEmpresa)
+  } catch (error) {
+    console.error('Error al generar el PDF de compras:', error)
+    makeToast('No se pudo generar el PDF de compras.', 'error')
+  }
 }
-
 onMounted(obtenerCompras)
 </script>

@@ -7,27 +7,27 @@
   ></div>
 
   <aside
-    class="fixed md:sticky top-0 left-0 h-screen w-64 bg-siete-bg border-r border-gray-200 overflow-y-auto z-40 transition-transform duration-200"
+    class="fixed md:sticky top-14 left-0 h-[calc(100vh-3rem)] w-64 bg-siete-bg border-r border-gray-200 overflow-y-auto z-40 transition-transform duration-200"
     :class="ui.sidebarAbierta ? 'translate-x-0' : '-translate-x-full md:translate-x-0'"
   >
     <!-- Perfil / sala / empresa actuales -->
-    <div class="border-b border-gray-200">
-      <router-link to="/perfil" class="flex items-center gap-2 px-4 py-3 text-sm text-white hover:bg-gray-300 border-b border-gray-200">
+    <div>
+      <router-link to="/perfil" class="flex items-center gap-2 px-4 py-3 text-sm text-white bg-siete-dark hover:bg-gray-300">
         <Icon icon="mdi:user" width="22" />
         <span class="truncate">{{ nombre }}</span>
       </router-link>
-      <router-link to="/seleccion" class="flex items-center gap-2 px-4 py-3 text-sm text-white hover:bg-gray-300 border-b border-gray-200">
+      <router-link to="/seleccion" class="flex items-center gap-2 px-4 py-3 text-sm text-white bg-siete-dark hover:bg-gray-300">
         <Icon icon="mdi:google-classroom" width="22" />
         <span class="truncate">{{ salaNombre || 'Sin sala seleccionada' }}</span>
       </router-link>
-      <router-link to="/seleccion" class="flex items-center gap-2 px-4 py-3 text-sm text-white hover:bg-gray-300">
+      <router-link to="/seleccion" class="flex items-center gap-2 px-4 py-3 text-sm text-white  bg-siete-dark hover:bg-gray-300">
         <Icon icon="mdi:office-building" width="22" />
         <span class="truncate">{{ empresaNombre || 'Sin empresa seleccionada' }}</span>
       </router-link>
     </div>
 
     <!-- Enlaces directos (no colapsables) -->
-    <nav class="border-b border-gray-200">
+    <nav>
       <router-link
         to="/menu"
         class="flex items-center gap-2 px-4 py-3 text-sm font-medium text-green-700 bg-green-50 hover:bg-green-100"
@@ -48,7 +48,7 @@
 
     <!-- Grupos colapsables -->
     <nav>
-      <div v-for="grupo in gruposVisibles" :key="grupo.clave" class="border-b border-gray-200">
+      <div v-for="grupo in gruposVisibles" :key="grupo.clave" >
         <button
           type="button"
           class="w-full flex items-center justify-between gap-2 px-4 py-3 text-sm text-white hover:bg-gray-300"
@@ -83,7 +83,7 @@
       <router-link
         v-if="esDocenteOAlumno"
         to="/acercade"
-        class="flex items-center gap-2 px-4 py-3 text-sm text-white hover:bg-gray-300 border-b border-gray-200"
+        class="flex items-center gap-2 px-4 py-3 text-sm text-white hover:bg-gray-300"
       >
         <Icon icon="mdi:chart-box-outline" width="22" />
         Acerca De
@@ -169,9 +169,9 @@ const grupos: GrupoMenu[] = [
     roles: [2, 3],
     items: [
       { label: 'Asientos contables', icono: 'mdi:clipboard-text', to: '/asiento' },
-      { label: 'Libro Diario', icono: 'mdi:book-open-page-variant', to: '/librodiario' },
+      /*{ label: 'Libro Diario', icono: 'mdi:book-open-page-variant', to: '/librodiario' },
       { label: 'Libro Mayor', icono: 'mdi:book-multiple', to: '/libromayor' },
-      { label: 'Balances', icono: 'mdi:chart-bar', to: '/balances' }
+      { label: 'Balances', icono: 'mdi:chart-bar', to: '/balances' }*/
     ]
   },
   {

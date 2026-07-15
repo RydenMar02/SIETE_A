@@ -5,7 +5,7 @@
     <div class="flex flex-1">
       <Siderbar />
 
-      <main class="flex-1 overflow-auto bg-gray-50">
+      <main class="flex-1 overflow-auto bg-slate-100">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 py-8">
 
           <ModalCrear
@@ -22,7 +22,7 @@
           </div>
 
           <!-- Barra de acciones -->
-          <div class="flex flex-wrap items-center gap-2 bg-white rounded-xl shadow-sm px-4 py-3 mb-4">
+          <div class="flex flex-wrap items-center gap-3 bg-white rounded-xl shadow-md border border-gray-200 px-4 py-3 mb-4">
             <button type="button" class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition flex items-center gap-1" @click="abrirModal">
               <i class="ti ti-plus"></i>
               Crear sala
@@ -32,20 +32,20 @@
               Ver salas
             </button>
 
-            <button type="button" class="bg-white border border-amber-500 text-amber-600 hover:bg-amber-50 text-sm font-medium px-4 py-2 rounded-lg transition" @click="mostrarDivAlumnos">
+            <!--<button type="button" class="bg-white border border-amber-500 text-amber-600 hover:bg-amber-50 text-sm font-medium px-4 py-2 rounded-lg transition" @click="mostrarDivAlumnos">
               Lista de alumnos
-            </button>
+            </button> 
 
             <button type="button" class="bg-white border border-blue-500 text-blue-600 hover:bg-blue-50 text-sm font-medium px-4 py-2 rounded-lg transition" disabled title="Próximamente">
               Ver tareas enviadas
-            </button>
+            </button> -->
           </div>
 
           <!-- Tabla de salas -->
-          <div v-show="mostrarSalas" class="bg-white rounded-xl shadow-sm overflow-hidden">
+          <div v-show="mostrarSalas" class="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
             <div class="overflow-x-auto">
               <table class="w-full text-sm">
-                <thead class="bg-slate-100 text-gray-700">
+                <thead class="bg-slate-700 text-white">
                   <tr>
                     <th class="text-left px-3 py-2">Ítem</th>
                     <th class="text-left px-3 py-2">Sala</th>
@@ -57,7 +57,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="item in items" :key="item.id_sala" class="border-t border-gray-100">
+                  <tr v-for="item in items" :key="item.id_sala" class="border-b border-gray-100 odd:bg-white even:bg-slate-100 hover:bg-green-50 transition-colors">
                     <td class="px-3 py-2">{{ item.id_sala }}</td>
                     <td class="px-3 py-2">{{ item.sala }}</td>
                     <td class="px-3 py-2">{{ item.contra }}</td>
@@ -87,10 +87,10 @@
           </div>
 
           <!-- Tabla de alumnos -->
-          <div v-show="!mostrarSalas" class="bg-white rounded-xl shadow-sm overflow-hidden">
+          <div v-show="!mostrarSalas" class="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
             <div class="overflow-x-auto">
               <table class="w-full text-sm">
-                <thead class="bg-slate-100 text-gray-700">
+                <thead class="bg-slate-700 text-white">
                   <tr>
                     <th class="text-left px-3 py-2">Ítem</th>
                     <th class="text-left px-3 py-2">Alumno</th>
@@ -99,7 +99,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="item in itemsAlumnos" :key="item.id_usuario" class="border-t border-gray-100">
+                  <tr v-for="item in itemsAlumnos" :key="item.id_usuario" class="border-b border-gray-100 odd:bg-white even:bg-slate-100 hover:bg-green-50 transition-colors">
                     <td class="px-3 py-2">{{ item.id_usuario }}</td>
                     <td class="px-3 py-2">{{ item.nombre }}</td>
                     <td class="px-3 py-2">{{ item.cedula }}</td>

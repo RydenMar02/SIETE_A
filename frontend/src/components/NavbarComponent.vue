@@ -1,5 +1,5 @@
 <template>
-  <header class="sticky top-0 z-20 bg-white shadow flex items-center justify-between px-3 py-2 md:px-4">
+  <header class="sticky top-0 z-30 bg-white shadow flex items-center justify-between px-3 py-2 md:px-4">
 
     <!-- Logo + botón de sidebar (mobile) -->
     <div class="flex items-center gap-2">

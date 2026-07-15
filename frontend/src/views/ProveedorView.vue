@@ -5,7 +5,7 @@
     <div class="flex flex-1">
       <Siderbar />
 
-      <main class="flex-1 overflow-auto bg-gray-50">
+      <main class="flex-1 overflow-auto bg-slate-100">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 py-8">
 
           <ClienteProveedorModal
@@ -22,7 +22,7 @@
           </div>
 
           <!-- Barra de búsqueda y acciones -->
-          <div class="flex flex-wrap items-center gap-3 bg-white rounded-xl shadow-sm px-4 py-3 mb-4">
+          <div class="flex flex-wrap items-center gap-3 bg-white rounded-xl shadow-md border border-gray-200 px-4 py-3 mb-4">
             <div class="flex items-center gap-2 flex-1 min-w-[240px]">
               <i class="ti ti-search text-gray-400 text-lg"></i>
               <input
@@ -49,10 +49,10 @@
           </div>
 
           <!-- Tabla -->
-          <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+          <div class="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
             <div class="overflow-x-auto">
               <table class="w-full text-sm">
-                <thead class="bg-slate-100 text-gray-700">
+                <thead class="bg-slate-700 text-white">
                   <tr>
                     <th class="text-left px-3 py-2">Tipo documento</th>
                     <th class="text-left px-3 py-2">N° identificación</th>
@@ -68,7 +68,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="item in proveedoresPaginados" :key="item.id_clienteproveedor" class="border-t border-gray-100">
+                  <tr v-for="item in proveedoresPaginados" :key="item.id_clienteproveedor" class="border-b border-gray-100 odd:bg-white even:bg-slate-100 hover:bg-green-50 transition-colors">
                     <td class="px-3 py-2">{{ ETIQUETAS_TIPO_DOCUMENTO[item.tipo_documento] }}</td>
                     <td class="px-3 py-2">{{ item.numero_identificacion }}</td>
                     <td class="px-3 py-2">{{ ETIQUETAS_TIPO_CONTRIBUYENTE[item.tipo_contribuyente] }}</td>
@@ -123,10 +123,9 @@ import { ETIQUETAS_TIPO_DOCUMENTO, ETIQUETAS_TIPO_CONTRIBUYENTE } from '@/servic
 import {
   obtenerClientesProveedores,
   eliminarClienteProveedor,
-  obtenerUrlReporteClientesProveedoresPdf,
   type ClienteProveedorDetalle
 } from '@/services/clienteProveedorService'
-
+import { abrirReportePdf } from '@/services/reportesService'
 const { makeToast, makeConfirm } = useAlertas()
 const seleccion = useSeleccionStore()
 
@@ -225,12 +224,18 @@ const eliminarProveedor = async (item: ClienteProveedorDetalle) => {
 }
 
 // ---------- Reporte PDF ----------
-const generarPdf = () => {
+
+const generarPdf = async () => {
   if (!seleccion.idEmpresa) {
     makeToast('No se encontró la empresa logueada.', 'warning')
     return
   }
-  window.open(obtenerUrlReporteClientesProveedoresPdf('PROVEEDOR', seleccion.idEmpresa), '_blank')
+  try {
+    await abrirReportePdf('proveedores', seleccion.idEmpresa)
+  } catch (error) {
+    console.error('Error al generar el PDF de proveedores:', error)
+    makeToast('No se pudo generar el PDF de proveedores.', 'error')
+  }
 }
 
 onMounted(obtenerProveedores)

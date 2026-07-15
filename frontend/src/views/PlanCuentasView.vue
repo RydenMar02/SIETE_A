@@ -5,7 +5,7 @@
     <div class="flex flex-1">
       <Siderbar />
 
-      <main class="flex-1 overflow-auto bg-gray-50">
+      <main class="flex-1 overflow-auto bg-slate-100">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 py-8">
 
           <ModalAccount
@@ -22,7 +22,7 @@
           </div>
 
           <!-- Barra de búsqueda y acciones -->
-          <div class="flex flex-wrap items-center gap-3 bg-white rounded-xl shadow-sm px-4 py-3 mb-4">
+          <div class="flex flex-wrap items-center gap-3 bg-white rounded-xl shadow-md border border-gray-200 px-4 py-3 mb-4">
             <div class="flex items-center gap-2 flex-1 min-w-[240px]">
               <i class="ti ti-search text-gray-400 text-lg"></i>
               <input
@@ -46,47 +46,96 @@
           </div>
 
           <!-- Tabla -->
-          <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+          <div class="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
             <div class="overflow-x-auto max-h-[65vh] overflow-y-auto">
-              <table class="w-full text-sm">
-                <thead class="sticky top-0 bg-slate-100 text-gray-700">
+              <table class="w-full text-sm border-separate border-spacing-0">
+                <thead class="sticky top-0 z-10 bg-slate-700 text-white">
                   <tr>
-                    <th class="text-left px-3 py-2">Código</th>
-                    <th class="text-left px-3 py-2">Nombre</th>
-                    <th class="text-left px-3 py-2">Nombre alternativo</th>
-                    <th class="text-left px-3 py-2">Nivel</th>
-                    <th class="text-left px-3 py-2">Naturaleza</th>
-                    <th class="text-left px-3 py-2">Asentable</th>
-                    <th class="text-left px-3 py-2">Moneda</th>
-                    <th class="text-center px-3 py-2">Modificar</th>
-                    <th class="text-center px-3 py-2">Eliminar</th>
+                    <th class="text-left px-3 py-2.5 font-semibold">Código</th>
+                    <th class="text-left px-3 py-2.5 font-semibold">Nombre</th>
+                    <th class="text-left px-3 py-2.5 font-semibold hidden md:table-cell">Nombre alternativo</th>
+                    <th class="text-center px-3 py-2.5 font-semibold">Nivel</th>
+                    <th class="text-left px-3 py-2.5 font-semibold hidden sm:table-cell">Naturaleza</th>
+                    <th class="text-center px-3 py-2.5 font-semibold hidden sm:table-cell">Asentable</th>
+                    <th class="text-left px-3 py-2.5 font-semibold hidden lg:table-cell">Moneda</th>
+                    <th class="text-center px-3 py-2.5 font-semibold">Modificar</th>
+                    <th class="text-center px-3 py-2.5 font-semibold">Eliminar</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="item in itemsFiltrados" :key="item.id_empresacuenta" class="border-t border-gray-100">
-                    <td class="px-3 py-2 whitespace-nowrap">{{ item.codigo }}</td>
-                    <td class="px-3 py-2" :style="{ paddingLeft: `${12 + item.nivelIndentado * 20}px` }">
-                      <i v-if="item.nivelIndentado > 0" class="ti ti-corner-down-right text-gray-400 mr-1"></i>
-                      {{ item.nombre }}
+                  <tr
+                    v-for="item in itemsFiltrados"
+                    :key="item.id_empresacuenta"
+                    class="border-b border-gray-100 odd:bg-white even:bg-slate-100 hover:bg-green-50 transition-colors"
+                  >
+                    <td
+                      class="px-3 py-2 whitespace-nowrap font-mono tabular-nums"
+                      :class="item.nivelIndentado === 0 ? 'text-gray-900 font-semibold' : 'text-gray-500'"
+                    >
+                      {{ item.codigo }}
                     </td>
-                    <td class="px-3 py-2">{{ item.nombre_alternativo }}</td>
-                    <td class="px-3 py-2">{{ item.nivel }}</td>
-                    <td class="px-3 py-2">{{ item.naturaleza }}</td>
-                    <td class="px-3 py-2">{{ item.asentable }}</td>
-                    <td class="px-3 py-2">{{ item.moneda }}</td>
+
+                    <!-- Nombre: peso e indentación distintos por nivel, con guía vertical -->
+                    <td class="px-3 py-2">
+                      <div class="flex items-center relative" :style="{ paddingLeft: `${item.nivelIndentado * 22}px` }">
+                        <span
+                          v-if="item.nivelIndentado > 0"
+                          class="absolute border-l-2 border-gray-200"
+                          :style="{ left: `${(item.nivelIndentado - 1) * 22 + 8}px`, top: '-9px', bottom: '9px' }"
+                        ></span>
+                        <i
+                          v-if="item.nivelIndentado > 0"
+                          class="ti ti-corner-down-right text-gray-300 mr-1.5 shrink-0"
+                        ></i>
+                        <span
+                          :class="[
+                            item.nivelIndentado === 0 ? 'text-gray-900 font-bold uppercase tracking-wide text-[13px]' : '',
+                            item.nivelIndentado === 1 ? 'text-slate-700 font-semibold' : '',
+                            item.nivelIndentado >= 2 ? 'text-gray-500 font-normal' : ''
+                          ]"
+                        >
+                          {{ item.nombre }}
+                        </span>
+                      </div>
+                    </td>
+
+                    <td class="px-3 py-2 text-gray-500 hidden md:table-cell">{{ item.nombre_alternativo }}</td>
+
                     <td class="px-3 py-2 text-center">
-                      <button type="button" class="text-blue-600 hover:text-blue-800" @click="editar(item)">
+                      <span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">
+                        {{ item.nivel }}
+                      </span>
+                    </td>
+
+                    <td class="px-3 py-2 hidden sm:table-cell">
+                      <span
+                        class="text-xs font-medium px-2 py-0.5 rounded-full"
+                        :class="item.naturaleza === 'DEUDORA' ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700'"
+                      >
+                        {{ item.naturaleza }}
+                      </span>
+                    </td>
+
+                    <td class="px-3 py-2 text-center hidden sm:table-cell">
+                      <i v-if="item.asentable === 'SI'" class="ti ti-check text-green-600 text-lg"></i>
+                      <i v-else class="ti ti-minus text-gray-300 text-lg"></i>
+                    </td>
+
+                    <td class="px-3 py-2 text-gray-500 hidden lg:table-cell">{{ item.moneda }}</td>
+
+                    <td class="px-3 py-2 text-center">
+                      <button type="button" class="text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded p-1 transition-colors" @click="editar(item)">
                         <i class="ti ti-pencil text-lg"></i>
                       </button>
                     </td>
                     <td class="px-3 py-2 text-center">
-                      <button type="button" class="text-red-600 hover:text-red-800" @click="eliminar(item)">
+                      <button type="button" class="text-red-600 hover:text-red-800 hover:bg-red-50 rounded p-1 transition-colors" @click="eliminar(item)">
                         <i class="ti ti-trash text-lg"></i>
                       </button>
                     </td>
                   </tr>
                   <tr v-if="itemsFiltrados.length === 0">
-                    <td colspan="9" class="text-center text-gray-400 py-6">No se encontraron resultados</td>
+                    <td colspan="9" class="text-center text-gray-400 py-8">No se encontraron resultados</td>
                   </tr>
                 </tbody>
               </table>
