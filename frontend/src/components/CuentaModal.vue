@@ -98,8 +98,8 @@
             <label for="naturaleza" class="block text-sm font-medium mb-1.5">Naturaleza</label>
             <select id="naturaleza" v-model="form.naturaleza" class="w-full bg-white text-gray-900 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2" :class="errores.naturaleza ? 'ring-2 ring-red-500' : 'focus:ring-green-500'">
               <option value="">Seleccionar</option>
-              <option value="ACREEDORA">Acreedora</option>
-              <option value="DEUDORA">Deudora</option>
+              <option value="ACREEDORA">ACREEDORA</option>
+              <option value="DEUDORA">DEUDORA</option>
             </select>
           </div>
 
@@ -107,8 +107,8 @@
             <label for="asentable" class="block text-sm font-medium mb-1.5">Asentable</label>
             <select id="asentable" v-model="form.asentable" class="w-full bg-white text-gray-900 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2" :class="errores.asentable ? 'ring-2 ring-red-500' : 'focus:ring-green-500'">
               <option value="">Seleccionar</option>
-              <option value="SI">Sí</option>
-              <option value="NO">No</option>
+              <option value="Si">SI</option>
+              <option value="No">NO</option>
             </select>
           </div>
 
@@ -116,8 +116,8 @@
             <label for="moneda" class="block text-sm font-medium mb-1.5">Moneda</label>
             <select id="moneda" v-model="form.moneda" class="w-full bg-white text-gray-900 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2" :class="errores.moneda ? 'ring-2 ring-red-500' : 'focus:ring-green-500'">
               <option value="">Seleccionar</option>
-              <option value="LOCAL">Local</option>
-              <option value="DOLAR">Dólar</option>
+              <option value="LOCAL">LOCAL</option>
+              <option value="DOLAR">DOLAR</option>
             </select>
           </div>
 

@@ -73,8 +73,11 @@ const routes = [
     component: () => import('../views/PeriodoView.vue')
   },
   {
-    // Ruta a la que redirige el guard de abajo cuando no hay token.
-    // Antes esta ruta no existía, así que el propio redirect rompía.
+    path: '/acercade',
+    name: 'acercade',
+    component: () => import('../views/AcercaDeView.vue')
+  },
+  {
     path: '/acceso-denegado',
     name: 'security',
     component: () => import('../views/AccessValidation.vue')

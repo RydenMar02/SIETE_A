@@ -1,7 +1,7 @@
 import api from './api'
 
 export interface AsientoDetallePayload {
-  idempresa_cuenta: number
+  id_empresacuenta: number
   debe: number
   haber: number
 }
@@ -9,7 +9,7 @@ export interface AsientoDetallePayload {
 export interface AsientoPayload {
   id_empresa: number
   id_sucursal: number | null
-  id_tipo_asiento: number | null
+  tipo_asiento: string
   documento: string
   total_debe: number
   total_haber: number
@@ -33,7 +33,7 @@ export const obtenerAsientos = (idEmpresa: number) =>
   api.get('/api/asientos', { params: { id_empresa: idEmpresa } })
 
 export const obtenerDetalleAsiento = (idAsiento: number) =>
-  api.get(`/api/detalleasiento/${idAsiento}`)
+  api.get(`/api/asientos/${idAsiento}`)
 
 export const anularAsiento = (idAsiento: number) =>
   api.delete(`/api/asientos/${idAsiento}`)

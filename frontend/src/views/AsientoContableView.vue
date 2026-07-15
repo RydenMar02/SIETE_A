@@ -16,7 +16,7 @@
 
           <!-- Barra de búsqueda y acciones -->
           <div class="flex flex-wrap items-center gap-3 bg-white rounded-xl shadow-md border border-gray-200 px-4 py-3 mb-4">
-            <div class="flex items-center gap-2 flex-1 min-w-[240px]">
+            <div class="flex items-center gap-2 flex-1  min-w-50">
               <i class="ti ti-search text-gray-400 text-lg"></i>
               <input
                 v-model="busqueda"
@@ -77,7 +77,7 @@
                     <td class="px-3 py-2 text-right">{{ item.total_debe }}</td>
                     <td class="px-3 py-2 text-right">{{ item.total_haber }}</td>
                     <td class="px-3 py-2 text-right">{{ item.diferencia }}</td>
-                    <td class="px-3 py-2">{{ ETIQUETAS_TIPO_ASIENTO[item.id_tipo_asiento] ?? item.id_tipo_asiento }}</td>
+                    <td class="px-3 py-2">{{ ETIQUETAS_TIPO_ASIENTO[item.tipo_asiento] ?? item.tipo_asiento }}</td>
                     <td class="px-3 py-2 text-center">
                       <button type="button" class="text-blue-600 hover:text-blue-800" @click="verDetalle(item)">
                         <i class="ti ti-list-details text-lg"></i>
@@ -107,7 +107,7 @@
           </div>
 
           <!-- Tabla de detalle -->
-          <div v-if="asientoSeleccionado" class="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
+          <div v-if="asientoSeleccionado" class="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200 mt-6">
             <h3 class="text-sm font-semibold text-gray-700 px-4 py-3 border-b border-gray-100">
               Detalle del asiento {{ asientoSeleccionado.numero_asiento }}
             </h3>
@@ -124,9 +124,9 @@
                 </thead>
                 <tbody>
                   <tr v-for="detalle in itemsDetalle" :key="detalle.id_detalle" class="border-t border-gray-100">
-                    <td class="px-3 py-2">{{ detalle.asientoCabecera?.numero_asiento }}</td>
-                    <td class="px-3 py-2">{{ detalle.empresacuenta.codigo }}</td>
-                    <td class="px-3 py-2">{{ detalle.empresacuenta.nombre }}</td>
+                    <td class="px-3 py-2">{{ asientoSeleccionado?.numero_asiento }}</td>
+                    <td class="px-3 py-2">{{ detalle.empresaCuenta.codigo }}</td>
+                    <td class="px-3 py-2">{{ detalle.empresaCuenta.nombre }}</td>
                     <td class="px-3 py-2 text-right">{{ detalle.debe }}</td>
                     <td class="px-3 py-2 text-right">{{ detalle.haber }}</td>
                   </tr>
@@ -157,6 +157,7 @@ import {
   anularAsiento
 } from '@/services/asientoService'
 import { abrirReportePdf } from '@/services/reportesService'
+
 const { makeToast, makeConfirm } = useAlertas()
 const seleccion = useSeleccionStore()
 
@@ -164,6 +165,8 @@ const seleccion = useSeleccionStore()
 interface Empresa { nombre: string }
 interface Sucursal { nombre: string }
 
+// tipo_asiento es el ENUM de texto de la tabla ('MANUAL'|'COMPRA'|'VENTA'|'AJUSTE'),
+// no un id numérico a otra tabla — coincide con el cambio que hicimos en ModalAsiento.
 interface Asiento {
   id_asiento: number
   numero_asiento: string
@@ -172,29 +175,38 @@ interface Asiento {
   total_debe: number
   total_haber: number
   diferencia: number
-  id_tipo_asiento: number
+  tipo_asiento: string
   empresa?: Empresa
   sucursal?: Sucursal
   concepto: string
 }
 
+// El campo real de la cuenta es id_empresacuenta (confirmado por la respuesta
+// del backend), no idempresa_cuenta.
 interface EmpresaCuenta {
-  idempresa_cuenta: number
+  id_empresacuenta: number
   codigo: string
   nombre: string
   naturaleza: string
   asentable: string
 }
 
+// El backend anida el detalle como "empresaCuenta" (C mayúscula), y no manda
+// un "asientoCabecera" por cada renglón — el número de asiento solo vive una
+// vez, en la cabecera (asientoSeleccionado), no repetido en cada detalle.
 interface AsientoDetalle {
   id_detalle: number
-  asientoCabecera?: Asiento
   debe: number
   haber: number
-  empresacuenta: EmpresaCuenta
+  empresaCuenta: EmpresaCuenta
 }
 
-const ETIQUETAS_TIPO_ASIENTO: Record<number, string> = { 1: 'Manual', 2: 'Compra', 3: 'Venta', 4: 'Ajuste' }
+const ETIQUETAS_TIPO_ASIENTO: Record<string, string> = {
+  MANUAL: 'Manual',
+  COMPRA: 'Compra',
+  VENTA: 'Venta',
+  AJUSTE: 'Ajuste'
+}
 
 // ---------- Datos ----------
 const items = ref<Asiento[]>([])
@@ -213,15 +225,15 @@ const cargarAsientos = async () => {
 const verDetalle = async (item: Asiento) => {
   asientoSeleccionado.value = item
   try {
+    // La respuesta es el asiento completo, con el detalle anidado bajo
+    // "asientoDetalles" — antes se buscaba "detalles", que no existe.
     const { data } = await obtenerDetalleAsiento(item.id_asiento)
-    itemsDetalle.value = data.detalles ?? []
+    itemsDetalle.value = data.asientoDetalles ?? []
   } catch (error) {
     manejarError(error, 'No se pudo traer los datos del detalle del asiento.')
   }
 }
 
-// Antes esta función existía pero no estaba conectada a ningún botón —
-// no había forma de anular un asiento desde la interfaz.
 const anular = async (item: Asiento) => {
   const confirmacion = await makeConfirm(
     '¿Está seguro?',
@@ -293,8 +305,6 @@ const abrirModal = () => {
 const recargarTabla = () => cargarAsientos()
 
 // ---------- Reporte PDF ----------
-// ---------- Reporte PDF ----------
-
 const generarPdf = async () => {
   if (!seleccion.idEmpresa) {
     makeToast('No se encontró la empresa logueada.', 'warning')

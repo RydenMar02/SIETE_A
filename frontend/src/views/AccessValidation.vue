@@ -19,8 +19,8 @@
 
         <!-- Imágenes -->
         <div class="flex flex-col items-center gap-4">
-          <img src="../assets/logoConta432x432.png" alt="Logo Conta" class="max-w-[200px] w-full object-contain" />
-          <img src="../assets/fcea75px.png" alt="Logo FCEA" class="max-w-[200px] w-full object-contain" />
+          <img src="../assets/logoConta432x432.png" alt="Logo Conta" class=" max-w-50 w-full object-contain" />
+          <img src="../assets/fcea75px.png" alt="Logo FCEA" class="max-w-50 w-full object-contain" />
         </div>
 
       </div>

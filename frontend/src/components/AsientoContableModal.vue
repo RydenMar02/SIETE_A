@@ -29,10 +29,10 @@
             <label class="block text-sm font-medium mb-1.5">Tipo de asiento</label>
             <select v-model="tipoAsiento" class="w-full bg-white text-gray-900 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500">
               <option value="">Seleccionar</option>
-              <option value="Manual">Manual</option>
-              <option value="Compra">Compra</option>
-              <option value="Venta">Venta</option>
-              <option value="Ajuste">Ajuste</option>
+              <option value="MANUAL">MANUAL</option>
+              <option value="COMPRA">COMPRA</option>
+              <option value="VENTA">VENTA</option>
+              <option value="AJUSTE">AJUSTE</option>
             </select>
           </div>
 
@@ -206,7 +206,6 @@ const emit = defineEmits<{
 const { makeToast, makeConfirm } = useAlertas()
 const seleccion = useSeleccionStore()
 
-const TIPO_ASIENTO_MAP: Record<string, number> = { Manual: 1, Compra: 2, Venta: 3, Ajuste: 4 }
 
 // ---------- Sucursales ----------
 const sucursales = ref<Sucursal[]>([])
@@ -291,7 +290,7 @@ const validarCodigo = async (): Promise<string> => {
   try {
     const { data } = await validarCuentaPorCodigo(cod, seleccion.idEmpresa)
     nombreCuenta.value = data.cuenta?.nombre ?? data.nombre ?? ''
-    idEmpresaCuentaSeleccionada.value = data.idempresa_cuenta ?? null
+    idEmpresaCuentaSeleccionada.value = data.id_empresacuenta ?? null
     return ''
   } catch (error) {
     nombreCuenta.value = ''
@@ -401,7 +400,7 @@ const guardarAsiento = async () => {
   }
 
   const detalles: AsientoDetallePayload[] = renglones.value.map((r) => ({
-    idempresa_cuenta: r.idempresaCuenta,
+    id_empresacuenta: r.idempresaCuenta,
     debe: r.debe,
     haber: r.haber
   }))
@@ -410,7 +409,7 @@ const guardarAsiento = async () => {
     await crearAsiento({
       id_empresa: seleccion.idEmpresa,
       id_sucursal: idSucursalSeleccionada.value,
-      id_tipo_asiento: TIPO_ASIENTO_MAP[tipoAsiento.value] ?? null,
+      tipo_asiento: tipoAsiento.value.toUpperCase() as 'MANUAL' | 'COMPRA' | 'VENTA' | 'AJUSTE',
       documento: '',
       total_debe: totalDebe.value,
       total_haber: totalHaber.value,

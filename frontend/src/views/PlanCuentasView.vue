@@ -23,7 +23,7 @@
 
           <!-- Barra de búsqueda y acciones -->
           <div class="flex flex-wrap items-center gap-3 bg-white rounded-xl shadow-md border border-gray-200 px-4 py-3 mb-4">
-            <div class="flex items-center gap-2 flex-1 min-w-[240px]">
+            <div class="flex items-center gap-2 flex-1  min-w-50">
               <i class="ti ti-search text-gray-400 text-lg"></i>
               <input
                 v-model="busqueda"
