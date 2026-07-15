@@ -18,7 +18,7 @@ router.get('/:id',  validarJWT, tieneRol(2, 3), getSucursalById);
 
 router.post('/',
     validarJWT,
-    tieneRol(3),
+    tieneRol(2,3),
     [
         body('id_empresa').notEmpty().withMessage('La empresa es obligatoria'),
         body('codigo').notEmpty().withMessage('El código es obligatorio'),
@@ -30,7 +30,7 @@ router.post('/',
     crearSucursal
 );
 
-router.put('/:id',    validarJWT, tieneRol(3), actualizarSucursal);
-router.delete('/:id', validarJWT, tieneRol(3), desactivarSucursal);
+router.put('/:id',    validarJWT, tieneRol(2,3), actualizarSucursal);
+router.delete('/:id', validarJWT, tieneRol(2,3), desactivarSucursal);
 
 export default router;

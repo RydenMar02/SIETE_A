@@ -36,7 +36,7 @@ const EmpresaCuenta = db.define(
       allowNull: false,
     },
     asentable: {
-      type: DataTypes.ENUM("Si", "No"),
+      type: DataTypes.ENUM("SI", "NO"),
       allowNull: false,
     },
     naturaleza: {
@@ -70,11 +70,13 @@ const EmpresaCuenta = db.define(
 );
 EmpresaCuenta.belongsTo(EmpresaCuenta, {
     foreignKey: 'id_padre',
+     targetKey: 'id_cuenta',
     as: 'cuentaPadre'
 });
 
 EmpresaCuenta.hasMany(EmpresaCuenta, {
     foreignKey: 'id_padre',
+    sourceKey: 'id_cuenta',
     as: 'cuentasHijas'
 });
 

@@ -39,6 +39,34 @@ export const getEmpresaCuentaById = async (req, res) => {
     }
 };
 
+export const getCuentaByCode = async (req, res) => {
+    const { codigo } = req.params;
+    const { id_empresa } = req.query;
+
+    try {
+        if (!id_empresa) {
+            return res.status(400).json({ msg: 'El id_empresa es obligatorio' });
+        }
+
+        const cuenta = await EmpresaCuenta.findOne({
+            where: {
+                id_empresa: parseInt(id_empresa),
+                codigo,
+                estado: 1
+            },
+            attributes: ['id_empresacuenta', 'id_cuenta', 'nombre', 'codigo', 'nivel', 'id_padre', 'id_empresa']
+        });
+
+        if (!cuenta) {
+            return res.status(404).json({ msg: `No se encontró cuenta con código ${codigo} para la empresa ${id_empresa}` });
+        }
+
+        res.json(cuenta);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ msg: 'Error al obtener la cuenta contable' });
+    }
+};
 // Filtrar por nivel y padre — igual que el proyecto anterior
 export const getCuentasPorNivelYPadre = async (req, res) => {
     try {

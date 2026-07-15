@@ -5,6 +5,7 @@ import {
     getEmpresaCuentaById,
     getCuentasPorNivelYPadre,
     getEstructuraCuentas,
+    getCuentaByCode,
     crearEmpresaCuenta,
     actualizarEmpresaCuenta,
     desactivarEmpresaCuenta
@@ -19,6 +20,7 @@ router.get('/',            validarJWT, tieneRol(2, 3), getEmpresaCuentas);
 router.get('/estructura',  validarJWT, tieneRol(2, 3), getEstructuraCuentas);
 router.get('/filtro',      validarJWT, tieneRol(2, 3), getCuentasPorNivelYPadre);
 router.get('/:id',         validarJWT, tieneRol(2, 3), getEmpresaCuentaById);
+router.get('/codigo/:codigo', validarJWT, tieneRol(2, 3), getCuentaByCode);
 
 router.post('/',
     validarJWT, tieneRol(3),
