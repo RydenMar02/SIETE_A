@@ -26,7 +26,7 @@ router.post('/',
     crearPeriodo
 );
 
-router.put('/:id',    validarJWT, tieneRol(2), actualizarPeriodo);
-router.delete('/:id', validarJWT, tieneRol(2), eliminarPeriodo);
+router.put('/:id',    validarJWT, tieneRol(1,2,3), actualizarPeriodo);
+router.delete('/:id', validarJWT, tieneRol(1,2,3), eliminarPeriodo);
 
 export default router;

@@ -18,7 +18,7 @@ router.get('/:id',  validarJWT, tieneRol(2, 3), getCompraVentaById);
 
 router.post('/',
     validarJWT,
-    tieneRol(3),
+    tieneRol(2,3),
     [
         body('tipo').isIn(['COMPRA', 'VENTA']).withMessage('El tipo debe ser COMPRA o VENTA'),
         body('id_sucursal').notEmpty().withMessage('La sucursal es obligatoria'),
@@ -37,7 +37,7 @@ router.post('/',
     crearCompraVenta
 );
 
-router.put('/:id',    validarJWT, tieneRol(3), actualizarCompraVenta);
-router.delete('/:id', validarJWT, tieneRol(3), desactivarCompraVenta);
+router.put('/:id',    validarJWT, tieneRol(2,3), actualizarCompraVenta);
+router.delete('/:id', validarJWT, tieneRol(2,3), desactivarCompraVenta);
 
 export default router;

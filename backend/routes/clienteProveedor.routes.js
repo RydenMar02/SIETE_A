@@ -18,7 +18,7 @@ router.get('/:id',  validarJWT, tieneRol(2, 3), getClienteProveedorById);
 
 router.post('/',
     validarJWT,
-    tieneRol(3),
+    tieneRol(2,3),
     [
         body('id_empresa').notEmpty().withMessage('La empresa es obligatoria'),
         body('id_ciudad').notEmpty().withMessage('La ciudad es obligatoria'),
@@ -34,7 +34,7 @@ router.post('/',
 
 router.put('/:id',
     validarJWT,
-    tieneRol(3),
+    tieneRol(2,3),
     [
         body('tipo').isIn(['CLIENTE', 'PROVEEDOR']).withMessage('El tipo debe ser CLIENTE o PROVEEDOR'),
         body('tipo_documento').isIn(['RUC', 'CI', 'PASAPORTE', 'DNI', 'RIF', 'NO_RESIDENTE']).withMessage('Tipo de documento inválido'),
@@ -46,6 +46,6 @@ router.put('/:id',
     actualizarClienteProveedor
 );
 
-router.delete('/:id', validarJWT, tieneRol(3), desactivarClienteProveedor);
+router.delete('/:id', validarJWT, tieneRol(2,3), desactivarClienteProveedor);
 
 export default router;

@@ -25,7 +25,7 @@ router.get('/:id/detalles',        validarJWT, tieneRol(2, 3), getDetallesPorAsi
 
 router.post('/',
     validarJWT,
-    tieneRol(3),
+    tieneRol(2,3),
     [
         body('id_empresa').notEmpty().withMessage('La empresa es obligatoria'),
         body('id_sucursal').notEmpty().withMessage('La sucursal es obligatoria'),
@@ -39,8 +39,8 @@ router.post('/',
     crearAsiento
 );
 
-router.put('/:id',    validarJWT, tieneRol(3), actualizarAsiento);
-router.delete('/:id', validarJWT, tieneRol(3), eliminarAsiento);
-router.patch('/:id/procesar', validarJWT, tieneRol(3), procesarAsiento);
+router.put('/:id',    validarJWT, tieneRol(2,3), actualizarAsiento);
+router.delete('/:id', validarJWT, tieneRol(2,3), eliminarAsiento);
+router.patch('/:id/procesar', validarJWT, tieneRol(2,3), procesarAsiento);
 
 export default router;
