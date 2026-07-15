@@ -29,6 +29,8 @@ export const getClientesPorEmpresa = async (req, res) => {
 export const reporteClientesPDF = async (req, res) => {
     const { id_empresa } = req.query;
     try {
+        const empresa = await Empresa.findByPk(id_empresa, { attributes: ['nombre'] });
+
         const registros = await ClienteProveedor.findAll({
             where: { estado: 1, id_empresa: parseInt(id_empresa), tipo: 'CLIENTE' },
             include: [{ model: Empresa, attributes: ['nombre'] }, { model: Ciudad, attributes: ['nombre'] }],
@@ -49,7 +51,7 @@ export const reporteClientesPDF = async (req, res) => {
         const templateSource = readFileSync(join(__dirname, '../views/reporteclientes.handlebars'), 'utf-8');
         const html = hbs.handlebars.compile(templateSource)({
             registros: registrosPlanos,
-            empresa: registros[0]?.Empresa?.nombre || 'Sin empresa',
+            empresa: empresa?.nombre || 'Sin empresa',
             marcaAgua: `${baseURL}/images/marcaAgua.png`,
             fcea: `${baseURL}/images/fcea.png`,
             unc: `${baseURL}/images/unc.png`

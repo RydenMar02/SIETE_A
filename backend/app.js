@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 
 import authRoutes from './routes/auth.routes.js';
 import usuariosRoutes from './routes/usuarios.routes.js';
@@ -16,7 +18,9 @@ import clienteProveedorRoutes from './routes/clienteProveedor.routes.js';
 import compraVentaRoutes from './routes/compraVenta.routes.js';
 import asientoRoutes from './routes/asiento.routes.js';
 import reportesRoutes from './routes/reportes.routes.js';
+import graficosRoutes from './routes/graficos.routes.js';
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 
@@ -27,6 +31,7 @@ app.use(cors({
 
 app.use(express.json());
 
+app.use('/images', express.static(join(__dirname, 'public', 'images')));
 app.use('/api/auth',     authRoutes);
 app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/roles',    rolesRoutes);
@@ -42,6 +47,7 @@ app.use('/api/clientes-proveedores', clienteProveedorRoutes);
 app.use('/api/compras-ventas', compraVentaRoutes);
 app.use('/api/asientos', asientoRoutes);
 app.use('/api/reportes', reportesRoutes);
+app.use('/api/graficos', graficosRoutes);
 
 app.get('/', (req, res) => {
     res.json({ msg: 'API funcionando correctamente' });
