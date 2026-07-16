@@ -45,7 +45,7 @@ app.use('/api/empresa-cuentas', empresaCuentaRoutes);
 app.use('/api/sucursales', sucursalRoutes);
 app.use('/api/clientes-proveedores', clienteProveedorRoutes);
 app.use('/api/compras-ventas', compraVentaRoutes);
-app.use('/api/asientos', asientoRoutes);
+app.use('/api/asiez ntos', asientoRoutes);
 app.use('/api/reportes', reportesRoutes);
 app.use('/api/graficos', graficosRoutes);
 
