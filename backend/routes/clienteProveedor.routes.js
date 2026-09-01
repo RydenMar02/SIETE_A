@@ -7,14 +7,17 @@ import {
     actualizarClienteProveedor,
     desactivarClienteProveedor
 } from '../controllers/clienteProveedor.controller.js';
+import ClienteProveedor from '../models/clienteProveedor.js';
 import { validarJWT } from '../middlewares/auth.middleware.js';
 import { tieneRol } from '../middlewares/roles.middleware.js';
 import { validar } from '../middlewares/validaciones.middleware.js';
+import { validarPertenenciaEmpresa, resolverDesdeModelo, resolverDesdeBody } from '../middlewares/pertenencia.middleware.js';
 
 const router = Router();
+const resolverDesdeClienteProveedor = resolverDesdeModelo(ClienteProveedor);
 
 router.get('/',     validarJWT, tieneRol(2, 3), getClientesProveedores);
-router.get('/:id',  validarJWT, tieneRol(2, 3), getClienteProveedorById);
+router.get('/:id',  validarJWT, tieneRol(2, 3), validarPertenenciaEmpresa(resolverDesdeClienteProveedor), getClienteProveedorById);
 
 router.post('/',
     validarJWT,
@@ -29,6 +32,7 @@ router.post('/',
         body('numero_identificacion').notEmpty().withMessage('El número de identificación es obligatorio'),
         validar
     ],
+    validarPertenenciaEmpresa(resolverDesdeBody),
     crearClienteProveedor
 );
 
@@ -43,9 +47,10 @@ router.put('/:id',
         body('numero_identificacion').notEmpty().withMessage('El número de identificación es obligatorio'),
         validar
     ],
+    validarPertenenciaEmpresa(resolverDesdeClienteProveedor),
     actualizarClienteProveedor
 );
 
-router.delete('/:id', validarJWT, tieneRol(2,3), desactivarClienteProveedor);
+router.delete('/:id', validarJWT, tieneRol(2,3), validarPertenenciaEmpresa(resolverDesdeClienteProveedor), desactivarClienteProveedor);
 
 export default router;

@@ -5,6 +5,8 @@ import AsientoDetalle from '../models/asientoDetalle.js';
 import Empresa from '../models/empresa.js';
 import Sucursal from '../models/sucursal.js';
 import EmpresaCuenta from '../models/empresaCuenta.js';
+import CompraVenta from '../models/compraVenta.js';
+import { puedeAccederAEmpresa } from '../middlewares/pertenencia.middleware.js';
 
 const includeCompleto = [
     { model: Empresa, as: 'empresa', attributes: ['nombre'] },
@@ -23,9 +25,17 @@ const includeCompleto = [
 export const getAsientos = async (req, res) => {
     let { desde = 0, limite = 10, id_empresa, estado, fecha_desde, fecha_hasta } = req.query;
 
+    if (!id_empresa) {
+        return res.status(400).json({ msg: 'id_empresa es obligatorio' });
+    }
+    id_empresa = parseInt(id_empresa);
+
     try {
-        const where = {};
-        if (id_empresa) where.id_empresa = parseInt(id_empresa);
+        if (!(await puedeAccederAEmpresa(req, id_empresa))) {
+            return res.status(403).json({ msg: 'No tenés permiso para ver los asientos de esta empresa' });
+        }
+
+        const where = { id_empresa };
         if (estado) where.estado = estado;
         if (fecha_desde && fecha_hasta) {
             where.fecha = { [Op.between]: [fecha_desde, fecha_hasta] };
@@ -69,8 +79,19 @@ export const getAsientoById = async (req, res) => {
 };
 
 export const getNumerosAsientos = async (req, res) => {
+    const { id_empresa } = req.query;
+
+    if (!id_empresa) {
+        return res.status(400).json({ msg: 'id_empresa es obligatorio' });
+    }
+
     try {
+        if (!(await puedeAccederAEmpresa(req, parseInt(id_empresa)))) {
+            return res.status(403).json({ msg: 'No tenés permiso para ver los asientos de esta empresa' });
+        }
+
         const asientos = await AsientoCabecera.findAll({
+            where: { id_empresa: parseInt(id_empresa) },
             attributes: ['numero_asiento'],
             order: [['fecha', 'DESC'], ['numero_asiento', 'DESC']]
         });
@@ -108,7 +129,7 @@ export const crearAsiento = async (req, res) => {
     const transaction = await db.transaction();
 
     try {
-        const { asientoDetalles, ...cabecera } = req.body;
+        const { asientoDetalles, id_compraventa, ...cabecera } = req.body;
 
         // Verificar duplicado
         const existe = await AsientoCabecera.findOne({
@@ -117,6 +138,28 @@ export const crearAsiento = async (req, res) => {
         if (existe) {
             await transaction.rollback();
             return res.status(400).json({ msg: `Ya existe un asiento con el número ${cabecera.numero_asiento}` });
+        }
+
+        // Si el asiento viene de "cargar desde compra/venta", validar que
+        // esa compra/venta exista, sea de esta empresa y no esté imputada ya
+        let compraVenta = null;
+        if (id_compraventa) {
+            compraVenta = await CompraVenta.findByPk(id_compraventa, {
+                include: [{ model: Sucursal, attributes: ['id_empresa'] }],
+                transaction
+            });
+            if (!compraVenta) {
+                await transaction.rollback();
+                return res.status(400).json({ msg: 'La compra/venta indicada no existe' });
+            }
+            if (compraVenta.Sucursal.id_empresa !== cabecera.id_empresa) {
+                await transaction.rollback();
+                return res.status(400).json({ msg: 'La compra/venta indicada no pertenece a esta empresa' });
+            }
+            if (compraVenta.imputada === 'SI') {
+                await transaction.rollback();
+                return res.status(400).json({ msg: 'Esa compra/venta ya fue imputada en otro asiento' });
+            }
         }
 
         // Validar cuentas asentables
@@ -157,6 +200,11 @@ export const crearAsiento = async (req, res) => {
             { transaction }
         );
 
+        // Si vino de una compra/venta, marcarla como ya imputada
+        if (compraVenta) {
+            await compraVenta.update({ imputada: 'SI' }, { transaction });
+        }
+
         await transaction.commit();
 
         const asientoCompleto = await AsientoCabecera.findByPk(nuevoCabecera.id_asiento, {
@@ -186,7 +234,7 @@ export const actualizarAsiento = async (req, res) => {
 
         if (asiento.estado === 'procesado') {
             await transaction.rollback();
-            return res.status(400).json({ msg: 'e modificar un asiento procesado' });
+            return res.status(400).json({ msg: 'No se puede modificar un asiento procesado' });
         }
 
         if (asientoDetalles && asientoDetalles.length > 0) {
@@ -247,7 +295,7 @@ export const eliminarAsiento = async (req, res) => {
 
         if (asiento.estado === 'procesado') {
             await transaction.rollback();
-            return res.status(400).json({ msg: 'e eliminar un asiento procesado' });
+            return res.status(400).json({ msg: 'No se puede eliminar un asiento procesado' });
         }
 
         await asiento.destroy({ transaction });
@@ -272,7 +320,7 @@ export const procesarAsiento = async (req, res) => {
             return res.status(400).json({ msg: 'El asiento ya está procesado' });
         }
         if (Math.abs(parseFloat(asiento.diferencia)) > 0.01) {
-            return res.status(400).json({ msg: 'e procesar un asiento no balanceado' });
+            return res.status(400).json({ msg: 'No se puede procesar un asiento no balanceado' });
         }
 
         await asiento.update({ estado: 'procesado' });

@@ -11,17 +11,25 @@ import {
     procesarAsiento,
     getDetallesPorAsiento
 } from '../controllers/asiento.controller.js';
+import AsientoCabecera from '../models/asientoCabecera.js';
 import { validarJWT } from '../middlewares/auth.middleware.js';
 import { tieneRol } from '../middlewares/roles.middleware.js';
 import { validar } from '../middlewares/validaciones.middleware.js';
+import {
+    validarPertenenciaEmpresa,
+    resolverDesdeModelo,
+    resolverDesdeParam,
+    resolverDesdeBody
+} from '../middlewares/pertenencia.middleware.js';
 
 const router = Router();
+const resolverDesdeAsiento = resolverDesdeModelo(AsientoCabecera);
 
 router.get('/',                    validarJWT, tieneRol(2, 3), getAsientos);
 router.get('/numeros',             validarJWT, tieneRol(2, 3), getNumerosAsientos);
-router.get('/resumen/:id_empresa', validarJWT, tieneRol(2, 3), getResumenAsientos);
-router.get('/:id',                 validarJWT, tieneRol(2, 3), getAsientoById);
-router.get('/:id/detalles',        validarJWT, tieneRol(2, 3), getDetallesPorAsiento);
+router.get('/resumen/:id_empresa', validarJWT, tieneRol(2, 3), validarPertenenciaEmpresa(resolverDesdeParam('id_empresa')), getResumenAsientos);
+router.get('/:id',                 validarJWT, tieneRol(2, 3), validarPertenenciaEmpresa(resolverDesdeAsiento), getAsientoById);
+router.get('/:id/detalles',        validarJWT, tieneRol(2, 3), validarPertenenciaEmpresa(resolverDesdeAsiento), getDetallesPorAsiento);
 
 router.post('/',
     validarJWT,
@@ -36,11 +44,12 @@ router.post('/',
         body('asientoDetalles').isArray({ min: 1 }).withMessage('Debe tener al menos un detalle'),
         validar
     ],
+    validarPertenenciaEmpresa(resolverDesdeBody),
     crearAsiento
 );
 
-router.put('/:id',    validarJWT, tieneRol(2,3), actualizarAsiento);
-router.delete('/:id', validarJWT, tieneRol(2,3), eliminarAsiento);
-router.patch('/:id/procesar', validarJWT, tieneRol(2,3), procesarAsiento);
+router.put('/:id',    validarJWT, tieneRol(2,3), validarPertenenciaEmpresa(resolverDesdeAsiento), actualizarAsiento);
+router.delete('/:id', validarJWT, tieneRol(2,3), validarPertenenciaEmpresa(resolverDesdeAsiento), eliminarAsiento);
+router.patch('/:id/procesar', validarJWT, tieneRol(2,3), validarPertenenciaEmpresa(resolverDesdeAsiento), procesarAsiento);
 
 export default router;

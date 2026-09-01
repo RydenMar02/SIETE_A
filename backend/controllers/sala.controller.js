@@ -42,7 +42,9 @@ export const getSalas = async (req, res) => {
 export const getSalaById = async (req, res) => {
     try {
         const { id } = req.params;
-        const sala = await Sala.findByPk(id, { attributes: ['contra'] });
+        const sala = await Sala.findByPk(id, {
+            attributes: ['id_sala', 'sala', 'curso', 'semestre', 'estado'],
+        });
         if (!sala) return res.status(404).json({ msg: 'Sala no encontrada' });
         res.json(sala);
     } catch (error) {

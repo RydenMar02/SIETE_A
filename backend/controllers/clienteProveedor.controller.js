@@ -1,13 +1,21 @@
 import ClienteProveedor from '../models/clienteProveedor.js';
 import Empresa from '../models/empresa.js';
 import Ciudad from '../models/ciudad.js';
+import { puedeAccederAEmpresa } from '../middlewares/pertenencia.middleware.js';
 
 export const getClientesProveedores = async (req, res) => {
     const { desde = 0, limite = 10, tipo, id_empresa } = req.query;
 
+    if (!id_empresa) {
+        return res.status(400).json({ msg: 'id_empresa es obligatorio' });
+    }
+
     try {
-        const where = { estado: 1 };
-        if (id_empresa) where.id_empresa = parseInt(id_empresa);
+        if (!(await puedeAccederAEmpresa(req, parseInt(id_empresa)))) {
+            return res.status(403).json({ msg: 'No tenés permiso para ver los clientes/proveedores de esta empresa' });
+        }
+
+        const where = { estado: 1, id_empresa: parseInt(id_empresa) };
         if (tipo && ['CLIENTE', 'PROVEEDOR'].includes(tipo.toUpperCase())) {
             where.tipo = tipo.toUpperCase();
         }

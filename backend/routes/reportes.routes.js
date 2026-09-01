@@ -10,6 +10,7 @@ import { getComprasPorEmpresa, reporteComprasPDF } from '../controllers/reportes
 import { getVentasPorEmpresa, reporteVentasPDF } from '../controllers/reportesVentas.controller.js';
 import { getLibroDiario, reporteLibroDiarioPDF } from '../controllers/reportesLibroDiario.controller.js';
 import { getLibroMayor, reporteLibroMayorPDF } from '../controllers/reportesLibroMayor.controller.js';
+import { getEstadoResultados, getBalanceGeneral } from '../controllers/reportesFinancieros.controller.js';
 
 const router = Router();
 
@@ -20,6 +21,10 @@ router.get('/asientos/pdf',          validarJWT, tieneRol(2, 3), reporteAsientos
 // Balance de sumas y saldos
 router.get('/balance-sumas',         validarJWT, tieneRol(2, 3), getBalanceSumas);
 router.get('/balance-sumas/pdf',     validarJWT, tieneRol(2, 3), reporteBalanceSumasPDF);
+
+// Estado de Resultados y Balance General
+router.get('/estado-resultados',     validarJWT, tieneRol(2, 3), getEstadoResultados);
+router.get('/balance-general',       validarJWT, tieneRol(2, 3), getBalanceGeneral);
 
 // Clientes
 router.get('/clientes',              validarJWT, tieneRol(2, 3), getClientesPorEmpresa);

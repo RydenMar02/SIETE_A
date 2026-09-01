@@ -1,23 +1,19 @@
 import { DataTypes } from 'sequelize';
 import db from '../db/conexion.js';
-import Ejercicio from './ejercicio.js';
+import Sala from './sala.js';
 
-const Periodo = db.define('Periodo', {
-    id_periodo: {
+const Ejercicio = db.define('Ejercicio', {
+    id_ejercicio: {
         type: DataTypes.INTEGER,
         primaryKey: true,
         autoIncrement: true
     },
-    id_ejercicio: {
+    id_sala: {
         type: DataTypes.INTEGER,
         allowNull: false
     },
-    mes: {
-        type: DataTypes.TINYINT,
-        allowNull: false
-    },
     nombre: {
-        type: DataTypes.STRING(20),
+        type: DataTypes.STRING(50),
         allowNull: false
     },
     fecha_inicio: {
@@ -34,16 +30,11 @@ const Periodo = db.define('Periodo', {
         defaultValue: 'ABIERTO'
     }
 }, {
-    tableName: 'periodo',
-    timestamps: true,
-    indexes: [{
-        unique: true,
-        fields: ['id_ejercicio', 'mes'],
-        name: 'uq_periodo_ejercicio_mes'
-    }]
+    tableName: 'ejercicio',
+    timestamps: true
 });
 
-Periodo.belongsTo(Ejercicio, { foreignKey: 'id_ejercicio' });
-Ejercicio.hasMany(Periodo, { foreignKey: 'id_ejercicio' });
+Ejercicio.belongsTo(Sala, { foreignKey: 'id_sala' });
+Sala.hasMany(Ejercicio, { foreignKey: 'id_sala' });
 
-export default Periodo;
+export default Ejercicio;

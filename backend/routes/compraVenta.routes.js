@@ -3,18 +3,29 @@ import { body } from 'express-validator';
 import {
     getComprasVentas,
     getCompraVentaById,
+    getSugerenciaAsiento,
     crearCompraVenta,
     actualizarCompraVenta,
     desactivarCompraVenta
 } from '../controllers/compraVenta.controller.js';
+import CompraVenta from '../models/compraVenta.js';
+import Sucursal from '../models/sucursal.js';
 import { validarJWT } from '../middlewares/auth.middleware.js';
 import { tieneRol } from '../middlewares/roles.middleware.js';
 import { validar } from '../middlewares/validaciones.middleware.js';
+import {
+    validarPertenenciaEmpresa,
+    resolverDesdeCompraVenta,
+    resolverDesdeSucursalBody
+} from '../middlewares/pertenencia.middleware.js';
 
 const router = Router();
+const resolverDesdeEstaCompraVenta = resolverDesdeCompraVenta(CompraVenta, Sucursal);
+const resolverDesdeSucursalDelBody = resolverDesdeSucursalBody(Sucursal);
 
 router.get('/',     validarJWT, tieneRol(2, 3), getComprasVentas);
-router.get('/:id',  validarJWT, tieneRol(2, 3), getCompraVentaById);
+router.get('/:id',  validarJWT, tieneRol(2, 3), validarPertenenciaEmpresa(resolverDesdeEstaCompraVenta), getCompraVentaById);
+router.get('/:id/sugerencia-asiento', validarJWT, tieneRol(2, 3), validarPertenenciaEmpresa(resolverDesdeEstaCompraVenta), getSugerenciaAsiento);
 
 router.post('/',
     validarJWT,
@@ -34,10 +45,11 @@ router.post('/',
         body('fecha_vencimiento').notEmpty().withMessage('La fecha de vencimiento es obligatoria'),
         validar
     ],
+    validarPertenenciaEmpresa(resolverDesdeSucursalDelBody),
     crearCompraVenta
 );
 
-router.put('/:id',    validarJWT, tieneRol(2,3), actualizarCompraVenta);
-router.delete('/:id', validarJWT, tieneRol(2,3), desactivarCompraVenta);
+router.put('/:id',    validarJWT, tieneRol(2,3), validarPertenenciaEmpresa(resolverDesdeEstaCompraVenta), actualizarCompraVenta);
+router.delete('/:id', validarJWT, tieneRol(2,3), validarPertenenciaEmpresa(resolverDesdeEstaCompraVenta), desactivarCompraVenta);
 
 export default router;

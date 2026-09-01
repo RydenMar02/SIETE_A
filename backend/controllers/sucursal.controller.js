@@ -1,14 +1,20 @@
 import Sucursal from '../models/sucursal.js';
+import { puedeAccederAEmpresa } from '../middlewares/pertenencia.middleware.js';
 
 export const getSucursales = async (req, res) => {
     const { id_empresa } = req.query;
 
+    if (!id_empresa) {
+        return res.status(400).json({ msg: 'id_empresa es obligatorio' });
+    }
+
     try {
-        const where = { estado: 1 };
-        if (id_empresa) where.id_empresa = parseInt(id_empresa);
+        if (!(await puedeAccederAEmpresa(req, parseInt(id_empresa)))) {
+            return res.status(403).json({ msg: 'No tenés permiso para ver las sucursales de esta empresa' });
+        }
 
         const sucursales = await Sucursal.findAll({
-            where,
+            where: { estado: 1, id_empresa: parseInt(id_empresa) },
             order: [['codigo', 'ASC']]
         });
 

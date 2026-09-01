@@ -5,6 +5,7 @@ import puppeteer from 'puppeteer';
 import { create } from 'express-handlebars';
 import db from '../db/conexion.js';
 import Empresa from '../models/empresa.js';
+import { puedeAccederAEmpresa } from '../middlewares/pertenencia.middleware.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const hbs = create();
@@ -28,6 +29,9 @@ export const getLibroMayor = async (req, res) => {
     const { id_empresa } = req.query;
     try {
         if (!id_empresa) return res.status(400).json({ msg: 'Falta el parámetro id_empresa' });
+        if (!(await puedeAccederAEmpresa(req, parseInt(id_empresa)))) {
+            return res.status(403).json({ msg: 'No tenés permiso para ver el libro mayor de esta empresa' });
+        }
         const [resultados] = await db.query(SQL_LIBRO_MAYOR, { replacements: { id_empresa: parseInt(id_empresa) } });
         res.json({ total: resultados.length, registros: resultados });
     } catch (error) {
@@ -40,6 +44,9 @@ export const reporteLibroMayorPDF = async (req, res) => {
     const { id_empresa } = req.query;
     try {
         if (!id_empresa) return res.status(400).json({ msg: 'Falta el parámetro id_empresa' });
+        if (!(await puedeAccederAEmpresa(req, parseInt(id_empresa)))) {
+            return res.status(403).json({ msg: 'No tenés permiso para ver el libro mayor de esta empresa' });
+        }
 
         const [resultados] = await db.query(SQL_LIBRO_MAYOR, { replacements: { id_empresa: parseInt(id_empresa) } });
         if (!resultados.length) return res.status(404).json({ msg: 'No hay registros para generar el libro mayor' });

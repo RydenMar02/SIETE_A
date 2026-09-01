@@ -15,6 +15,8 @@ const router = Router();
 router.get(
   "/top-sucursales/:empresaId",
   [
+    validarJWT,
+    tieneRol(1, 2, 3),
     validar,
   ],
   getTopSucursales
@@ -23,6 +25,8 @@ router.get(
 router.get(
   "/top-clientes/:empresaId",
   [
+    validarJWT,
+    tieneRol(1, 2, 3),
     validar,
   ],
   getTopClientesPorSucursal
@@ -31,6 +35,8 @@ router.get(
 router.get(
   "/top-proveedores/:empresaId",
   [
+    validarJWT,
+    tieneRol(1, 2, 3),
     validar,
   ],
   getTopProveedoresPorSucursal

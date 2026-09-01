@@ -10,9 +10,15 @@ export const getSalasConProfesores = async (req, res) => {
         if (curso) whereSala.curso = curso;
         if (semestre) whereSala.semestre = semestre;
 
+        // Solo un ADMIN puede consultar por el id_usuario que mande en el query;
+        // cualquier otro rol solo puede consultar sus propias salas.
+        const idUsuarioConsulta = req.usuario.id_rol === 1 && id_usuario
+            ? parseInt(id_usuario)
+            : req.usuario.id_usuario;
+
         const whereProfesor = {};
-        if (rol && parseInt(rol) === 2 && id_usuario) {
-            whereProfesor.id_usuario = parseInt(id_usuario);
+        if (rol && parseInt(rol) === 2) {
+            whereProfesor.id_usuario = idUsuarioConsulta;
         }
 
         const [total, salaUsuarios] = await Promise.all([
@@ -53,10 +59,16 @@ export const getUsuarioEnSala = async (req, res) => {
         const campoUsuario = tipo.toUpperCase() === 'PROFESOR' ? 'id_profesor' : 'id_alumno';
         const alias = tipo.toUpperCase() === 'PROFESOR' ? 'Profesor' : 'Alumno'; // 👈 alias obligatorio
 
+        // Solo un ADMIN puede consultar por el id_usuario que mande en el query;
+        // cualquier otro rol solo puede consultar su propia pertenencia.
+        const idUsuarioConsulta = req.usuario.id_rol === 1 && id_usuario
+            ? parseInt(id_usuario)
+            : req.usuario.id_usuario;
+
         const salaUsuario = await SalaUsuario.findOne({
             where: {
                 id_sala: parseInt(id_sala),
-                [campoUsuario]: parseInt(id_usuario),
+                [campoUsuario]: idUsuarioConsulta,
                 estado: 1
             },
             include: [

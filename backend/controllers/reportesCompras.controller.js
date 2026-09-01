@@ -7,6 +7,7 @@ import CompraVenta from '../models/compraVenta.js';
 import ClienteProveedor from '../models/clienteProveedor.js';
 import Sucursal from '../models/sucursal.js';
 import Empresa from '../models/empresa.js';
+import { puedeAccederAEmpresa } from '../middlewares/pertenencia.middleware.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const hbs = create();
@@ -15,6 +16,9 @@ export const getComprasPorEmpresa = async (req, res) => {
     const { id_empresa } = req.query;
     try {
         if (!id_empresa) return res.status(400).json({ msg: 'Falta el parámetro id_empresa' });
+        if (!(await puedeAccederAEmpresa(req, parseInt(id_empresa)))) {
+            return res.status(403).json({ msg: 'No tenés permiso para ver las compras de esta empresa' });
+        }
         const registros = await CompraVenta.findAll({
             where: { estado: 1, tipo: 'COMPRA' },
             include: [
@@ -33,6 +37,11 @@ export const getComprasPorEmpresa = async (req, res) => {
 export const reporteComprasPDF = async (req, res) => {
     const { id_empresa } = req.query;
     try {
+        if (!id_empresa) return res.status(400).json({ msg: 'Falta el parámetro id_empresa' });
+        if (!(await puedeAccederAEmpresa(req, parseInt(id_empresa)))) {
+            return res.status(403).json({ msg: 'No tenés permiso para ver las compras de esta empresa' });
+        }
+
         const empresa = await Empresa.findByPk(id_empresa, { attributes: ['nombre'] });
 
         const registros = await CompraVenta.findAll({

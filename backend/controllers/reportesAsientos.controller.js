@@ -9,6 +9,7 @@ import AsientoDetalle from '../models/asientoDetalle.js';
 import Empresa from '../models/empresa.js';
 import Sucursal from '../models/sucursal.js';
 import EmpresaCuenta from '../models/empresaCuenta.js';
+import { puedeAccederAEmpresa } from '../middlewares/pertenencia.middleware.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const hbs = create();
@@ -20,6 +21,10 @@ export const getAsientosPorEmpresa = async (req, res) => {
 
     try {
         if (!id_empresa) return res.status(400).json({ msg: 'Falta el parámetro id_empresa' });
+
+        if (!(await puedeAccederAEmpresa(req, parseInt(id_empresa)))) {
+            return res.status(403).json({ msg: 'No tenés permiso para ver los asientos de esta empresa' });
+        }
 
         const asientos = await AsientoCabecera.findAll({
             where: { id_empresa: parseInt(id_empresa) },
@@ -46,6 +51,12 @@ export const reporteAsientosPDF = async (req, res) => {
     const { id_empresa } = req.query;
 
     try {
+        if (!id_empresa) return res.status(400).json({ msg: 'Falta el parámetro id_empresa' });
+
+        if (!(await puedeAccederAEmpresa(req, parseInt(id_empresa)))) {
+            return res.status(403).json({ msg: 'No tenés permiso para ver los asientos de esta empresa' });
+        }
+
         const empresa = await Empresa.findByPk(id_empresa, { attributes: ['nombre'] });
 
         const asientos = await AsientoCabecera.findAll({

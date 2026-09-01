@@ -6,6 +6,7 @@ import { create } from 'express-handlebars';
 import ClienteProveedor from '../models/clienteProveedor.js';
 import Empresa from '../models/empresa.js';
 import Ciudad from '../models/ciudad.js';
+import { puedeAccederAEmpresa } from '../middlewares/pertenencia.middleware.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const hbs = create();
@@ -14,6 +15,9 @@ export const getClientesPorEmpresa = async (req, res) => {
     const { id_empresa } = req.query;
     try {
         if (!id_empresa) return res.status(400).json({ msg: 'Falta el parámetro id_empresa' });
+        if (!(await puedeAccederAEmpresa(req, parseInt(id_empresa)))) {
+            return res.status(403).json({ msg: 'No tenés permiso para ver los clientes de esta empresa' });
+        }
         const registros = await ClienteProveedor.findAll({
             where: { estado: 1, id_empresa: parseInt(id_empresa), tipo: 'CLIENTE' },
             include: [{ model: Empresa, attributes: ['nombre'] }, { model: Ciudad, attributes: ['nombre'] }],
@@ -29,6 +33,11 @@ export const getClientesPorEmpresa = async (req, res) => {
 export const reporteClientesPDF = async (req, res) => {
     const { id_empresa } = req.query;
     try {
+        if (!id_empresa) return res.status(400).json({ msg: 'Falta el parámetro id_empresa' });
+        if (!(await puedeAccederAEmpresa(req, parseInt(id_empresa)))) {
+            return res.status(403).json({ msg: 'No tenés permiso para ver los clientes de esta empresa' });
+        }
+
         const empresa = await Empresa.findByPk(id_empresa, { attributes: ['nombre'] });
 
         const registros = await ClienteProveedor.findAll({

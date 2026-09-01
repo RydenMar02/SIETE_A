@@ -1,4 +1,5 @@
 import EmpresaCuenta from '../models/empresaCuenta.js';
+import { puedeAccederAEmpresa } from '../middlewares/pertenencia.middleware.js';
 
 export const getEmpresaCuentas = async (req, res) => {
     const { id_empresa } = req.query;
@@ -6,6 +7,10 @@ export const getEmpresaCuentas = async (req, res) => {
     try {
         if (!id_empresa) {
             return res.status(400).json({ msg: 'El id_empresa es obligatorio' });
+        }
+
+        if (!(await puedeAccederAEmpresa(req, parseInt(id_empresa)))) {
+            return res.status(403).json({ msg: 'No tenés permiso para ver las cuentas de esta empresa' });
         }
 
         const cuentas = await EmpresaCuenta.findAll({
@@ -48,6 +53,10 @@ export const getCuentaByCode = async (req, res) => {
             return res.status(400).json({ msg: 'El id_empresa es obligatorio' });
         }
 
+        if (!(await puedeAccederAEmpresa(req, parseInt(id_empresa)))) {
+            return res.status(403).json({ msg: 'No tenés permiso para ver las cuentas de esta empresa' });
+        }
+
         const cuenta = await EmpresaCuenta.findOne({
             where: {
                 id_empresa: parseInt(id_empresa),
@@ -74,6 +83,10 @@ export const getCuentasPorNivelYPadre = async (req, res) => {
 
         if (!id_empresa) {
             return res.status(400).json({ msg: 'El id_empresa es obligatorio' });
+        }
+
+        if (!(await puedeAccederAEmpresa(req, parseInt(id_empresa)))) {
+            return res.status(403).json({ msg: 'No tenés permiso para ver las cuentas de esta empresa' });
         }
 
         const where = {
@@ -111,6 +124,10 @@ export const getEstructuraCuentas = async (req, res) => {
 
         if (!id_empresa) {
             return res.status(400).json({ msg: 'El id_empresa es obligatorio' });
+        }
+
+        if (!(await puedeAccederAEmpresa(req, parseInt(id_empresa)))) {
+            return res.status(403).json({ msg: 'No tenés permiso para ver las cuentas de esta empresa' });
         }
 
         const empresaId = parseInt(id_empresa);

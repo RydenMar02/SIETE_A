@@ -10,16 +10,19 @@ import {
     actualizarEmpresaCuenta,
     desactivarEmpresaCuenta
 } from '../controllers/empresaCuenta.controller.js';
+import EmpresaCuenta from '../models/empresaCuenta.js';
 import { validarJWT } from '../middlewares/auth.middleware.js';
 import { tieneRol } from '../middlewares/roles.middleware.js';
 import { validar } from '../middlewares/validaciones.middleware.js';
+import { validarPertenenciaEmpresa, resolverDesdeModelo, resolverDesdeBody } from '../middlewares/pertenencia.middleware.js';
 
 const router = Router();
+const resolverDesdeEmpresaCuenta = resolverDesdeModelo(EmpresaCuenta);
 
 router.get('/',            validarJWT, tieneRol(2, 3), getEmpresaCuentas);
 router.get('/estructura',  validarJWT, tieneRol(2, 3), getEstructuraCuentas);
 router.get('/filtro',      validarJWT, tieneRol(2, 3), getCuentasPorNivelYPadre);
-router.get('/:id',         validarJWT, tieneRol(2, 3), getEmpresaCuentaById);
+router.get('/:id',         validarJWT, tieneRol(2, 3), validarPertenenciaEmpresa(resolverDesdeEmpresaCuenta), getEmpresaCuentaById);
 router.get('/codigo/:codigo', validarJWT, tieneRol(2, 3), getCuentaByCode);
 
 router.post('/',
@@ -32,10 +35,11 @@ router.post('/',
         body('id_empresa').notEmpty().withMessage('La empresa es obligatoria'),
         validar
     ],
+    validarPertenenciaEmpresa(resolverDesdeBody),
     crearEmpresaCuenta
 );
 
-router.put('/:id',    validarJWT, tieneRol(3), actualizarEmpresaCuenta);
-router.delete('/:id', validarJWT, tieneRol(3), desactivarEmpresaCuenta);
+router.put('/:id',    validarJWT, tieneRol(3), validarPertenenciaEmpresa(resolverDesdeEmpresaCuenta), actualizarEmpresaCuenta);
+router.delete('/:id', validarJWT, tieneRol(3), validarPertenenciaEmpresa(resolverDesdeEmpresaCuenta), desactivarEmpresaCuenta);
 
 export default router;
