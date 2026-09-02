@@ -1,5 +1,4 @@
 <template>
-  <!-- Modales: se mantienen igual que antes, solo se les pasa el estado del paso actual -->
   <ModalSala
     v-if="mostrarModalSala && accionSala === 'crear'"
     :tituloModal="tituloModalSala"
@@ -319,7 +318,7 @@ const seleccionarSala = async (sala: Sala) => {
       return
     }
  
-    seleccion.setSala(sala.sala, relacion.id_salausuario, sala.id_profesor ?? 0)
+    seleccion.setSala(sala.sala, relacion.id_salausuario, sala.id_sala, sala.id_profesor ?? 0)
  
     makeToast(`Ingresaste a la sala: ${sala.sala}`, 'success')
     pasoActual.value = 3

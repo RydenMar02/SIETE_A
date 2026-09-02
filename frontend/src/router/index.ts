@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useSesionStore } from '@/stores/useSesionStore'
+import { useTiempoRealStore } from '@/stores/useTiempoRealStore'
 
 const routes = [
   {
@@ -48,6 +49,11 @@ const routes = [
     component: () => import('../views/SalasView.vue')
   },
   {
+    path: '/seguimiento-aula',
+    name: 'seguimiento-aula',
+    component: () => import('../views/SeguimientoAulaView.vue')
+  },
+  {
     path: '/sucursal',
     name: 'sucursal',
     component: () => import('../views/SucursalesView.vue')
@@ -68,11 +74,6 @@ const routes = [
     component: () => import('../views/VentaView.vue')
   },
   {
-    path: '/periodo',
-    name: 'periodo',
-    component: () => import('../views/PeriodoView.vue')
-  },
-  {
     path: '/acercade',
     name: 'acercade',
     component: () => import('../views/AcercaDeView.vue')
@@ -91,7 +92,7 @@ const router = createRouter({
 
 // Guard de navegación: si no hay sesión, solo se permite ir al login o a la
 // pantalla de acceso denegado. Cualquier otra ruta redirige a 'security'.
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, _from, next) => {
   const sesion = useSesionStore()
 
   const rutasPublicas = ['Login', 'security']
@@ -101,6 +102,14 @@ router.beforeEach((to, from, next) => {
   } else {
     next()
   }
+})
+
+// Reporta en qué página está el usuario para que "Seguimiento en aula" lo
+// muestre en vivo. Si el socket todavía no conectó (o no hay sesión), el
+// store simplemente no manda nada — no hace falta chequear acá.
+router.afterEach((to) => {
+  const tiempoReal = useTiempoRealStore()
+  tiempoReal.reportarActividad(to.path)
 })
 
 export default router

@@ -60,22 +60,30 @@
             <p v-if="errores.sigla" class="text-red-300 text-xs mt-1">{{ errores.sigla }}</p>
           </div>
 
-          <!-- Período -->
+          <!-- Período fiscal: ya no se elige acá. La empresa usa el
+               ejercicio activo de su sala (se crea junto con la sala), así
+               que esto es solo informativo. -->
           <div class="sm:col-span-2">
-            <label for="idPeriodo" class="block text-sm font-medium mb-1.5">Seleccionar período</label>
-            <select
-              id="idPeriodo"
-              v-model="form.id_periodo"
-              class="w-full bg-white text-gray-900 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2"
-              :class="errores.id_periodo ? 'ring-2 ring-red-500' : 'focus:ring-green-500'"
-              @change="errores.id_periodo = validarPeriodo(form.id_periodo)"
-            >
-              <option :value="0" disabled>Seleccionar</option>
-              <option v-for="periodo in periodos" :key="periodo.id_periodo" :value="periodo.id_periodo">
-                {{ periodo.periodo || 'Sin nombre' }}
-              </option>
-            </select>
-            <p v-if="errores.id_periodo" class="text-red-300 text-xs mt-1">{{ errores.id_periodo }}</p>
+            <label class="block text-sm font-medium mb-1.5">Período fiscal</label>
+
+            <div v-if="cargandoEjercicio" class="text-slate-300 text-sm px-3 py-2.5">
+              Buscando el ejercicio activo de la sala...
+            </div>
+
+            <div v-else-if="ejercicioActivo" class="bg-slate-600 text-slate-100 rounded-lg px-3 py-2.5">
+              {{ ejercicioActivo.nombre }}
+              <span class="text-slate-300 text-xs block">
+                {{ ejercicioActivo.fecha_inicio }} a {{ ejercicioActivo.fecha_fin }}
+              </span>
+            </div>
+
+            <div v-else-if="!seleccion.idSala" class="bg-yellow-900/40 text-yellow-200 text-sm rounded-lg px-3 py-2.5">
+              No se pudo identificar la sala de esta sesión. Salí y volvé a seleccionar la sala para continuar.
+            </div>
+
+            <div v-else class="bg-red-900/40 text-red-200 text-sm rounded-lg px-3 py-2.5">
+              Esta sala todavía no tiene un ejercicio activo. Pedile al profesor que cree uno antes de cargar una empresa.
+            </div>
           </div>
         </div>
 
@@ -84,7 +92,11 @@
           <button type="button" class="bg-red-600 hover:bg-red-700 text-white font-medium px-4 py-2 rounded-lg transition" @click="pedirCerrar">
             Cancelar
           </button>
-          <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2 rounded-lg transition">
+          <button
+            type="submit"
+            :disabled="!esModificacion && !cargandoEjercicio && !ejercicioActivo"
+            class="bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-green-600"
+          >
             {{ esModificacion ? 'Modificar' : 'Guardar' }}
           </button>
         </div>
@@ -94,7 +106,7 @@
 </template>
 
 <script lang="ts" setup>
-import { reactive, computed, onMounted } from 'vue'
+import { reactive, ref, computed, onMounted } from 'vue'
 import { useAlertas } from '@/composables/useAlertas'
 import { useSeleccionStore } from '@/stores/useSeleccionStore'
 import {
@@ -104,7 +116,7 @@ import {
   type EmpresaPayload,
   type Empresa
 } from '@/services/empresaService'
-import { obtenerPeriodos, type Periodo } from '@/services/periodoService'
+import { obtenerEjerciciosPorSala, type Ejercicio } from '@/services/ejercicioService'
 
 // ---------- Props ----------
 const props = defineProps<{
@@ -127,8 +139,7 @@ const esModificacion = computed(() => !!props.empresa?.id_empresa)
 const form = reactive({
   nombre: props.empresa?.nombre ?? '',
   ruc: props.empresa?.ruc ?? '',
-  sigla: props.empresa?.sigla ?? '',
-  id_periodo: props.empresa?.id_periodo ?? 0
+  sigla: props.empresa?.sigla ?? ''
 })
 
 // ---------- Validaciones ----------
@@ -140,11 +151,6 @@ const validarNombreEmpresa = (valor: string): string => {
   if (nombre.length < 3) return 'Debe tener al menos 3 caracteres.'
   if (nombre.length > 100) return 'Máximo 100 caracteres.'
   if (!/^[A-Za-z0-9ÁÉÍÓÚÑáéíóúñ.,&\- ]+$/.test(nombre)) return 'Contiene caracteres inválidos.'
-  return ''
-}
-
-const validarPeriodo = (valor: number): string => {
-  if (!valor || valor === 0) return 'Por favor seleccione un período.'
   return ''
 }
 
@@ -164,14 +170,13 @@ const validarRuc = (valor: string): string => {
   return ''
 }
 
-const errores = reactive({ nombre: '', ruc: '', sigla: '', id_periodo: '' })
+const errores = reactive({ nombre: '', ruc: '', sigla: '' })
 
 const formularioValido = (): boolean => {
   errores.nombre = validarNombreEmpresa(form.nombre)
   errores.ruc = validarRuc(form.ruc)
   errores.sigla = validarSigla(form.sigla)
-  errores.id_periodo = validarPeriodo(form.id_periodo)
-  return !errores.nombre && !errores.ruc && !errores.sigla && !errores.id_periodo
+  return !errores.nombre && !errores.ruc && !errores.sigla
 }
 
 // Normaliza sigla y ruc antes de guardar (la sigla, por ejemplo, se guarda con punto final)
@@ -199,8 +204,7 @@ const verificarDuplicados = async (): Promise<{ mismoNombre: boolean; mismaCombi
   const mismaCombinacion = empresasRegistradas.some(
     (e) =>
       (e.nombre || '').trim().replace(/\s+/g, ' ').toLowerCase() === nombreNormalizado &&
-      (e.sigla || '').trim().toUpperCase() === siglaNormalizada &&
-      e.id_periodo === form.id_periodo
+      (e.sigla || '').trim().toUpperCase() === siglaNormalizada
   )
 
   return { mismoNombre, mismaCombinacion }
@@ -229,6 +233,11 @@ const guardarOModificar = async () => {
     return
   }
 
+  if (!ejercicioActivo.value) {
+    makeToast('Esta sala todavía no tiene un ejercicio activo, no se puede crear la empresa.', 'error')
+    return
+  }
+
   const { mismaCombinacion, mismoNombre } = await verificarDuplicados()
   if (mismaCombinacion) {
     makeToast('Ya existe una empresa registrada con la misma sigla y período.', 'error')
@@ -246,7 +255,6 @@ const armarPayload = (): EmpresaPayload => ({
   nombre: form.nombre,
   ruc: form.ruc,
   sigla: form.sigla,
-  id_periodo: form.id_periodo,
   id_salausuario: seleccion.idSalaUsuario,
   estado: true
 })
@@ -274,16 +282,30 @@ const modificar = async () => {
   }
 }
 
-// ---------- Períodos para el select ----------
-const periodos = reactive<Periodo[]>([])
+// ---------- Ejercicio activo de la sala (informativo, ya no se elige) ----------
+// No existe un endpoint que devuelva "el ejercicio activo" directo: se pide
+// el listado completo de ejercicios de la sala (ya viene ordenado por fecha
+// descendente) y se toma el primero que esté ABIERTO, del lado del cliente.
+const ejercicioActivo = ref<Ejercicio | null>(null)
+const cargandoEjercicio = ref(true)
 
-const cargarPeriodos = async () => {
+const cargarEjercicioActivo = async () => {
+  cargandoEjercicio.value = true
   try {
-    const { data } = await obtenerPeriodos()
-    periodos.splice(0, periodos.length, ...data)
+    if (!seleccion.idSala) {
+      // Sesión vieja (de antes de que el store guardara id_sala): no hay
+      // forma de resolverlo sin volver a pasar por la selección de sala.
+      ejercicioActivo.value = null
+      return
+    }
+    const { data } = await obtenerEjerciciosPorSala(seleccion.idSala)
+    const ejercicios: Ejercicio[] = data?.ejercicios ?? []
+    ejercicioActivo.value = ejercicios.find((e) => e.estado === 'ABIERTO') ?? null
   } catch (error) {
+    ejercicioActivo.value = null
     console.error(error)
-    makeToast('Error al obtener los períodos.', 'error')
+  } finally {
+    cargandoEjercicio.value = false
   }
 }
 
@@ -299,6 +321,6 @@ const manejarError = (error: unknown, mensajePorDefecto: string) => {
 }
 
 onMounted(() => {
-  cargarPeriodos()
+  cargarEjercicioActivo()
 })
 </script>

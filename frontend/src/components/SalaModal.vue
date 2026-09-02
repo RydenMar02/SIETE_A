@@ -63,6 +63,25 @@
           </select>
         </div>
 
+        <!-- Año del ejercicio (solo al crear una sala nueva: una sala ya
+             existente ya tiene su ejercicio, no se le crea otro acá) -->
+        <div v-if="!esModificacion">
+          <label for="anio" class="block text-sm font-medium mb-1.5">Año del ejercicio</label>
+          <input
+            id="anio"
+            v-model.number="form.anio"
+            type="number"
+            min="2000"
+            max="2100"
+            placeholder="Ej: 2026"
+            class="w-full bg-white text-gray-900 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2"
+            :class="errores.anio ? 'ring-2 ring-red-500' : 'focus:ring-green-500'"
+            @blur="errores.anio = validarAnio(form.anio)"
+          />
+          <p v-if="errores.anio" class="text-red-300 text-xs mt-1">{{ errores.anio }}</p>
+          <p class="text-slate-400 text-xs mt-1">Se crea junto con la sala, con sus 12 períodos mensuales. Las empresas que se carguen en esta sala van a usar este período.</p>
+        </div>
+
         <!-- Contraseña -->
         <div>
           <label for="password" class="block text-sm font-medium mb-1.5">Contraseña</label>
@@ -138,10 +157,10 @@ import { useSeleccionStore } from '@/stores/useSeleccionStore'
 import {
   crearSala,
   modificarSala,
-  obtenerSala,
   ingresarASala,
   type SalaPayload
 } from '@/services/salaService'
+import { crearEjercicio } from '@/services/ejercicioService'
 import {
   CUSRO,
   ETIQUETAS_CURSO,
@@ -189,7 +208,8 @@ const form = reactive({
   sala: props.sala?.sala ?? '',
   curso: '' as curso | '',
   semestre: '' as semestre | '',
-  contra: ''
+  contra: '',
+  anio: new Date().getFullYear()
 })
 const confirmPassword = ref('')
 
@@ -219,7 +239,15 @@ const validarContraRepetida = (repetida: string, original: string): string => {
   return ''
 }
 
-const errores = reactive({ sala: '', password: '', confirmPassword: '' })
+// Solo se valida al crear una sala nueva; una sala existente ya tiene su
+// ejercicio y este campo ni se muestra (ver v-if="!esModificacion").
+const validarAnio = (valor: number): string => {
+  if (!valor) return 'Por favor, ingrese el año.'
+  if (valor < 2000 || valor > 2100) return 'Ingrese un año válido.'
+  return ''
+}
+
+const errores = reactive({ sala: '', password: '', confirmPassword: '', anio: '' })
 
 const formularioValido = (): boolean => {
   errores.sala = validarNombreSala(form.sala)
@@ -227,7 +255,8 @@ const formularioValido = (): boolean => {
   errores.confirmPassword = props.mostrarConfirmar
     ? validarContraRepetida(confirmPassword.value, form.contra)
     : ''
-  return !errores.sala && !errores.password && !errores.confirmPassword
+  errores.anio = !esModificacion.value ? validarAnio(form.anio) : ''
+  return !errores.sala && !errores.password && !errores.confirmPassword && !errores.anio
 }
 
 // ---------- Nombre del profesor ----------
@@ -266,8 +295,28 @@ const guardarOModificar = async () => {
       await modificarSala(props.sala.id_sala, payload)
       makeToast('La sala se modificó correctamente.', 'success')
     } else {
-      await crearSala(payload)
-      makeToast('La sala se guardó correctamente.', 'success')
+      // Paso 1: crear la sala. Paso 2: crear su ejercicio (con los 12
+      // periodos, los genera el backend solo). No es una transacción
+      // real —son dos llamadas separadas—, así que si el paso 2 falla
+      // avisamos explícitamente: la sala queda creada pero sin ejercicio.
+      const { data } = await crearSala(payload)
+      const idSalaCreada = data?.sala?.id_sala
+
+      if (!idSalaCreada) {
+        makeToast('La sala se creó pero no se pudo leer su ID para generar el ejercicio. Entrá a Salas y creá el ejercicio manualmente.', 'warning')
+      } else {
+        try {
+          await crearEjercicio({
+            id_sala: idSalaCreada,
+            nombre: `Ejercicio ${form.anio}`,
+            anio: form.anio
+          })
+          makeToast('La sala se guardó correctamente, junto con el ejercicio y sus 12 períodos.', 'success')
+        } catch (errorEjercicio) {
+          console.error(errorEjercicio)
+          makeToast('La sala se creó, pero no se pudo crear el ejercicio. Entrá a Salas y creálo manualmente para esta sala.', 'warning')
+        }
+      }
     }
     emit('actualizartabla')
     emit('cerrar')
@@ -281,14 +330,12 @@ const ingresar = async () => {
   if (!props.sala) return
 
   try {
-    const { data } = await obtenerSala(props.sala.id_sala)
-    const contraCorrecta: string | undefined = data.contra ?? data.dataValues?.contra
-
-    if (contraCorrecta?.trim() !== form.contra.trim()) {
-      makeToast('La contraseña ingresada no coincide con la de la sala.', 'error')
-      return
-    }
-
+    // Antes había acá un chequeo de contraseña del lado del cliente (pedía
+    // la sala y comparaba data.contra a mano) — pero el backend nunca
+    // devuelve ese campo, así que siempre fallaba, sin importar la
+    // contraseña. El backend YA valida la contraseña de verdad dentro de
+    // ingresarASala (devuelve 401 si está mal), así que directamente
+    // confiamos en eso y mostramos el error real si lo hay.
     const { data: resultado } = await ingresarASala({
       id_sala: props.sala.id_sala,
       contrasena: form.contra,
@@ -299,8 +346,10 @@ const ingresar = async () => {
       estado: true
     })
 
-    if (resultado.id_salausuario) {
-      seleccion.setSala(props.sala.sala, resultado.id_salausuario, seleccion.idProfesor)
+    // El backend responde { msg, registro }, no { id_salausuario } directo.
+    const idSalaUsuario = resultado?.registro?.id_salausuario
+    if (idSalaUsuario) {
+      seleccion.setSala(props.sala.sala, idSalaUsuario, props.sala.id_sala, seleccion.idProfesor)
     }
 
     makeToast('Ingreso a la sala exitoso.', 'success')
