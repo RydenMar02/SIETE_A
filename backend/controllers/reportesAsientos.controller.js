@@ -10,6 +10,7 @@ import Empresa from '../models/empresa.js';
 import Sucursal from '../models/sucursal.js';
 import EmpresaCuenta from '../models/empresaCuenta.js';
 import { puedeAccederAEmpresa } from '../middlewares/pertenencia.middleware.js';
+import { registrarMovimiento } from '../helpers/registrarMovimiento.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const hbs = create();
@@ -134,6 +135,13 @@ export const reporteAsientosPDF = async (req, res) => {
 
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', 'inline; filename=reporte_asientos.pdf');
+        await registrarMovimiento({
+            id_usuario: req.usuario.id_usuario,
+            id_empresa: parseInt(id_empresa),
+            tipo: 'GENERO_PDF_ASIENTOS',
+            descripcion: 'Generó el PDF del reporte de asientos'
+        });
+
         res.sendFile(outputPath);
     } catch (error) {
         console.error(error);

@@ -26,7 +26,7 @@ const Cuenta = db.define('Cuenta', {
     },
     naturaleza: {
         type: DataTypes.ENUM('ACREEDORA', 'DEUDORA'),
-        allowNull: true
+        allowNull: false
     },
     moneda: {
         type: DataTypes.ENUM('LOCAL', 'EXTRANJERA'),

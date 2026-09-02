@@ -1,5 +1,6 @@
 import EmpresaCuenta from '../models/empresaCuenta.js';
 import { puedeAccederAEmpresa } from '../middlewares/pertenencia.middleware.js';
+import { registrarMovimiento } from '../helpers/registrarMovimiento.js';
 
 export const getEmpresaCuentas = async (req, res) => {
     const { id_empresa } = req.query;
@@ -208,6 +209,14 @@ export const crearEmpresaCuenta = async (req, res) => {
             estado: 1
         });
 
+        await registrarMovimiento({
+            id_usuario: req.usuario.id_usuario,
+            id_empresa,
+            tipo: 'CREO_CUENTA',
+            descripcion: `Creó la cuenta "${cuenta.nombre}" (${cuenta.codigo})`,
+            referencia_id: cuenta.id_empresacuenta
+        });
+
         res.status(201).json({ msg: 'Cuenta creada correctamente', cuenta });
     } catch (error) {
         console.error(error);
@@ -226,6 +235,15 @@ export const actualizarEmpresaCuenta = async (req, res) => {
         }
 
         await cuenta.update({ nombre, nombre_alternativo, codigo, asentable, naturaleza, moneda, nivel, estado });
+
+        await registrarMovimiento({
+            id_usuario: req.usuario.id_usuario,
+            id_empresa: cuenta.id_empresa,
+            tipo: 'MODIFICO_CUENTA',
+            descripcion: `Modificó la cuenta "${cuenta.nombre}" (${cuenta.codigo})`,
+            referencia_id: cuenta.id_empresacuenta
+        });
+
         res.json({ msg: 'Cuenta actualizada', cuenta });
     } catch (error) {
         console.error(error);
@@ -248,6 +266,15 @@ export const desactivarEmpresaCuenta = async (req, res) => {
         }
 
         await cuenta.update({ estado: 0 });
+
+        await registrarMovimiento({
+            id_usuario: req.usuario.id_usuario,
+            id_empresa: cuenta.id_empresa,
+            tipo: 'ELIMINO_CUENTA',
+            descripcion: `Desactivó la cuenta "${cuenta.nombre}" (${cuenta.codigo})`,
+            referencia_id: cuenta.id_empresacuenta
+        });
+
         res.json({ msg: 'Cuenta desactivada' });
     } catch (error) {
         console.error(error);

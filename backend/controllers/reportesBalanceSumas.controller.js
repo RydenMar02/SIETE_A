@@ -6,6 +6,7 @@ import { create } from 'express-handlebars';
 import db from '../db/conexion.js';
 import Empresa from '../models/empresa.js';
 import { puedeAccederAEmpresa } from '../middlewares/pertenencia.middleware.js';
+import { registrarMovimiento } from '../helpers/registrarMovimiento.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const hbs = create();
@@ -83,6 +84,13 @@ export const reporteBalanceSumasPDF = async (req, res) => {
 
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', 'inline; filename=reporte_balance_sumas.pdf');
+        await registrarMovimiento({
+            id_usuario: req.usuario.id_usuario,
+            id_empresa: parseInt(id_empresa),
+            tipo: 'GENERO_PDF_BALANCE_SUMAS',
+            descripcion: 'Generó el PDF del balance de sumas y saldos'
+        });
+
         res.sendFile(outputPath);
     } catch (error) {
         console.error(error);

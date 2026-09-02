@@ -1,8 +1,8 @@
 import Empresa from "../models/empresa.js";
-import SalaUsuario from "../models/salaUsuario.js";
 import Cuenta from "../models/cuenta.js";
 import EmpresaCuenta from "../models/empresaCuenta.js";
 import { puedeAccederASalaUsuario } from "../middlewares/pertenencia.middleware.js";
+import { registrarMovimiento } from "../helpers/registrarMovimiento.js";
 import db from "../db/conexion.js";
 
 export const getEmpresas = async (req, res) => {
@@ -136,6 +136,15 @@ export const crearEmpresa = async (req, res) => {
 
       await EmpresaCuenta.bulkCreate(empresaCuentas, { transaction: t });
 
+      await registrarMovimiento({
+        id_usuario: req.usuario.id_usuario,
+        id_empresa: empresa.id_empresa,
+        tipo: 'CREO_EMPRESA',
+        descripcion: `Creó la empresa "${empresa.nombre}"`,
+        referencia_id: empresa.id_empresa,
+        transaction: t
+      });
+
       return empresa;
     });
 
@@ -154,6 +163,15 @@ export const actualizarEmpresa = async (req, res) => {
     const empresa = await Empresa.findByPk(id);
     if (!empresa) return res.status(404).json({ msg: "Empresa no encontrada" });
     await empresa.update({ nombre, ruc, sigla });
+
+    await registrarMovimiento({
+      id_usuario: req.usuario.id_usuario,
+      id_empresa: empresa.id_empresa,
+      tipo: 'MODIFICO_EMPRESA',
+      descripcion: `Modificó los datos de la empresa "${empresa.nombre}"`,
+      referencia_id: empresa.id_empresa
+    });
+
     res.json({ msg: "Empresa actualizada", empresa });
   } catch (error) {
     console.error(error);
@@ -168,6 +186,15 @@ export const desactivarEmpresa = async (req, res) => {
     const empresa = await Empresa.findByPk(id);
     if (!empresa) return res.status(404).json({ msg: "Empresa no encontrada" });
     await empresa.update({ estado: 0 });
+
+    await registrarMovimiento({
+      id_usuario: req.usuario.id_usuario,
+      id_empresa: empresa.id_empresa,
+      tipo: 'DESACTIVO_EMPRESA',
+      descripcion: `Desactivó la empresa "${empresa.nombre}"`,
+      referencia_id: empresa.id_empresa
+    });
+
     res.json({ msg: "Empresa desactivada" });
   } catch (error) {
     console.error(error);

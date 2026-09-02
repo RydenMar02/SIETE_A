@@ -5,6 +5,7 @@ import {
     getCompraVentaById,
     getSugerenciaAsiento,
     crearCompraVenta,
+    imputarCompraVenta,
     actualizarCompraVenta,
     desactivarCompraVenta
 } from '../controllers/compraVenta.controller.js';
@@ -48,6 +49,8 @@ router.post('/',
     validarPertenenciaEmpresa(resolverDesdeSucursalDelBody),
     crearCompraVenta
 );
+
+router.post('/:id/imputar', validarJWT, tieneRol(2, 3), validarPertenenciaEmpresa(resolverDesdeEstaCompraVenta), imputarCompraVenta);
 
 router.put('/:id',    validarJWT, tieneRol(2,3), validarPertenenciaEmpresa(resolverDesdeEstaCompraVenta), actualizarCompraVenta);
 router.delete('/:id', validarJWT, tieneRol(2,3), validarPertenenciaEmpresa(resolverDesdeEstaCompraVenta), desactivarCompraVenta);

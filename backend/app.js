@@ -12,8 +12,8 @@ import salaRoutes from './routes/sala.routes.js';
 import salaUsuarioRoutes from './routes/salaUsuario.routes.js';
 import periodoRoutes from './routes/periodo.routes.js';
 import ejercicioRoutes from './routes/ejercicio.routes.js';
-import tareaRoutes from './routes/tarea.routes.js';
-import entregaRoutes from './routes/entrega.routes.js';
+import actividadRoutes from './routes/actividad.routes.js';
+import movimientoRoutes from './routes/movimiento.routes.js';
 import empresaRoutes from './routes/empresa.routes.js';
 import empresaCuentaRoutes from './routes/empresaCuenta.routes.js';
 import sucursalRoutes from './routes/sucursal.routes.js';
@@ -33,7 +33,7 @@ const origenesPermitidos = (process.env.FRONTEND_URL || 'http://localhost:5173')
 
 app.use(cors({
     origin: (origen, callback) => {
-        // Permite herramientas sin origin (Postman, curl) solo si no hay credenciales involucradas
+        
         if (!origen || origenesPermitidos.includes(origen)) {
             callback(null, true);
         } else {
@@ -55,8 +55,8 @@ app.use('/api/salas', salaRoutes);
 app.use('/api/sala-usuarios', salaUsuarioRoutes);
 app.use('/api/periodos', periodoRoutes);
 app.use('/api/ejercicios', ejercicioRoutes);
-app.use('/api/tareas', tareaRoutes);
-app.use('/api/entregas', entregaRoutes);
+app.use('/api/actividades', actividadRoutes);
+app.use('/api/movimientos', movimientoRoutes);
 app.use('/api/empresas', empresaRoutes);
 app.use('/api/empresa-cuentas', empresaCuentaRoutes);
 app.use('/api/sucursales', sucursalRoutes);

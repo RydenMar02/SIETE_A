@@ -7,6 +7,7 @@ import Sucursal from '../models/sucursal.js';
 import EmpresaCuenta from '../models/empresaCuenta.js';
 import CompraVenta from '../models/compraVenta.js';
 import { puedeAccederAEmpresa } from '../middlewares/pertenencia.middleware.js';
+import { registrarMovimiento } from '../helpers/registrarMovimiento.js';
 
 const includeCompleto = [
     { model: Empresa, as: 'empresa', attributes: ['nombre'] },
@@ -205,6 +206,15 @@ export const crearAsiento = async (req, res) => {
             await compraVenta.update({ imputada: 'SI' }, { transaction });
         }
 
+        await registrarMovimiento({
+            id_usuario: req.usuario.id_usuario,
+            id_empresa: cabecera.id_empresa,
+            tipo: 'CARGO_ASIENTO',
+            descripcion: `Cargó el asiento ${cabecera.numero_asiento}`,
+            referencia_id: nuevoCabecera.id_asiento,
+            transaction
+        });
+
         await transaction.commit();
 
         const asientoCompleto = await AsientoCabecera.findByPk(nuevoCabecera.id_asiento, {
@@ -271,6 +281,16 @@ export const actualizarAsiento = async (req, res) => {
         }
 
         await asiento.update(cabecera, { transaction });
+
+        await registrarMovimiento({
+            id_usuario: req.usuario.id_usuario,
+            id_empresa: asiento.id_empresa,
+            tipo: 'MODIFICO_ASIENTO',
+            descripcion: `Modificó el asiento ${asiento.numero_asiento}`,
+            referencia_id: asiento.id_asiento,
+            transaction
+        });
+
         await transaction.commit();
 
         const asientoActualizado = await AsientoCabecera.findByPk(id, { include: includeCompleto });
@@ -298,6 +318,15 @@ export const eliminarAsiento = async (req, res) => {
             return res.status(400).json({ msg: 'No se puede eliminar un asiento procesado' });
         }
 
+        await registrarMovimiento({
+            id_usuario: req.usuario.id_usuario,
+            id_empresa: asiento.id_empresa,
+            tipo: 'ELIMINO_ASIENTO',
+            descripcion: `Eliminó el asiento ${asiento.numero_asiento}`,
+            referencia_id: asiento.id_asiento,
+            transaction
+        });
+
         await asiento.destroy({ transaction });
         await transaction.commit();
         res.json({ msg: 'Asiento eliminado' });
@@ -324,6 +353,15 @@ export const procesarAsiento = async (req, res) => {
         }
 
         await asiento.update({ estado: 'procesado' });
+
+        await registrarMovimiento({
+            id_usuario: req.usuario.id_usuario,
+            id_empresa: asiento.id_empresa,
+            tipo: 'PROCESO_ASIENTO',
+            descripcion: `Procesó el asiento ${asiento.numero_asiento}`,
+            referencia_id: asiento.id_asiento
+        });
+
         res.json({ msg: 'Asiento procesado', asiento });
     } catch (error) {
         console.error(error);

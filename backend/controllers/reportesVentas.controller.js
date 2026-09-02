@@ -8,6 +8,7 @@ import ClienteProveedor from '../models/clienteProveedor.js';
 import Sucursal from '../models/sucursal.js';
 import Empresa from '../models/empresa.js';
 import { puedeAccederAEmpresa } from '../middlewares/pertenencia.middleware.js';
+import { registrarMovimiento } from '../helpers/registrarMovimiento.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const hbs = create();
@@ -89,6 +90,13 @@ export const reporteVentasPDF = async (req, res) => {
 
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', 'inline; filename=reporte_ventas.pdf');
+        await registrarMovimiento({
+            id_usuario: req.usuario.id_usuario,
+            id_empresa: parseInt(id_empresa),
+            tipo: 'GENERO_PDF_VENTAS',
+            descripcion: 'Generó el PDF del listado de ventas'
+        });
+
         res.sendFile(outputPath);
     } catch (error) {
         console.error(error);
