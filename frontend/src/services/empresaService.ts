@@ -5,14 +5,12 @@ export interface Empresa {
   nombre: string
   ruc?: string
   sigla?: string
-  id_periodo?: number
 }
 
 export interface EmpresaPayload {
   nombre: string
   ruc: string
   sigla: string
-  id_periodo: number
   id_salausuario: number
   estado: boolean
 }

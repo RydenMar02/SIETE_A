@@ -136,7 +136,8 @@ const grupos: GrupoMenu[] = [
     icono: 'mdi:school-outline',
     roles: [2],
     items: [
-      { label: 'Crear', icono: 'mdi:create-new-folder-outline', to: '/crearsala' }
+      { label: 'Crear', icono: 'mdi:create-new-folder-outline', to: '/crearsala' },
+      { label: 'Seguimiento en aula', icono: 'mdi:monitor-eye', to: '/seguimiento-aula' }
     ]
   },
   {
@@ -181,7 +182,6 @@ const grupos: GrupoMenu[] = [
     roles: [2, 3],
     items: [
       { label: 'Configuración', icono: 'mdi:wrench-cog-outline', to: '/config' },
-      { label: 'Periodos', icono: 'mdi:calendar-month-outline', to: '/periodo' },
       { label: 'Ayuda', icono: 'mdi:help', to: '/ayuda' }
     ]
   }

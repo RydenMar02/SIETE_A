@@ -22,6 +22,7 @@ import compraVentaRoutes from './routes/compraVenta.routes.js';
 import asientoRoutes from './routes/asiento.routes.js';
 import reportesRoutes from './routes/reportes.routes.js';
 import graficosRoutes from './routes/graficos.routes.js';
+import mensajeRoutes from './routes/mensaje.routes.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -65,6 +66,7 @@ app.use('/api/compras-ventas', compraVentaRoutes);
 app.use('/api/asientos', asientoRoutes);
 app.use('/api/reportes', reportesRoutes);
 app.use('/api/graficos', graficosRoutes);
+app.use('/api/mensajes', mensajeRoutes);
 
 app.get('/', (req, res) => {
     res.json({ msg: 'API funcionando correctamente' });

@@ -1,8 +1,8 @@
 import { Op, fn, col, literal } from 'sequelize';
-import CompraVenta from '../models/compraventa.js';
+import CompraVenta from '../models/compraVenta.js';
 import Sucursal from '../models/sucursal.js';
 import Empresa from '../models/empresa.js';
-import ClienteProveedor from '../models/clienteproveedor.js';
+import ClienteProveedor from '../models/clienteProveedor.js';
 
 // 1. Top sucursales (ventas + compras)
 export const getTopSucursales = async (req, res) => {
