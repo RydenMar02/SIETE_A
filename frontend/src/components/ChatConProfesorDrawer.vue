@@ -1,6 +1,6 @@
 <template>
   <teleport to="body">
-    <div class="fixed inset-0 z-[2000] pointer-events-none">
+    <div class="fixed inset-0 z-2000 pointer-events-none">
       <!-- Fondo oscurecido, cierra al tocar afuera -->
       <div class="absolute inset-0 bg-black/30 pointer-events-auto" @click="cerrar"></div>
 

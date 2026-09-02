@@ -1,5 +1,5 @@
 <template>
-  <header class="sticky top-0 z-30 bg-white shadow flex items-center justify-between px-3 py-2 md:px-4 relative">
+  <header class="sticky top-0 z-30 bg-white shadow flex items-center justify-between px-3 py-2 md:px-4">
 
     <!-- Logo + botón de sidebar (mobile) -->
     <div class="flex items-center gap-2">
@@ -38,7 +38,7 @@
         Notificaciones
         <span
           v-if="tiempoReal.mensajesNoLeidos > 0"
-          class="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] leading-none rounded-full min-w-[16px] h-4 flex items-center justify-center px-1"
+          class="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] leading-none rounded-full min-w-4 h-4 flex items-center justify-center px-1"
         >
           {{ tiempoReal.mensajesNoLeidos > 9 ? '9+' : tiempoReal.mensajesNoLeidos }}
         </span>
@@ -93,7 +93,7 @@
         >
           <Icon icon="mdi:bell-outline" width="20" />
           Notificaciones
-          <span v-if="tiempoReal.mensajesNoLeidos > 0" class="ml-auto bg-red-600 text-white text-[10px] leading-none rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
+          <span v-if="tiempoReal.mensajesNoLeidos > 0" class="ml-auto bg-red-600 text-white text-[10px] leading-none rounded-full min-w-4 h-4 flex items-center justify-center px-1">
             {{ tiempoReal.mensajesNoLeidos > 9 ? '9+' : tiempoReal.mensajesNoLeidos }}
           </span>
         </button>
