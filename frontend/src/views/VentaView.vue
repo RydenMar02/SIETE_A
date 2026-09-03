@@ -139,6 +139,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useAlertas } from '@/composables/useAlertas'
 import { useSeleccionStore } from '@/stores/useSeleccionStore'
+import { useEspejoApp } from '@/composables/useEspejoapp'
 import Navbar from '@/components/NavbarComponent.vue'
 import Siderbar from '@/components/SiderbarComponent.vue'
 import CompraVentaModal from '@/components/CompraVentaModal.vue'
@@ -282,6 +283,17 @@ watch(columnaFiltro, () => { pagina.value = 1 })
 const mostrarModal = ref(false)
 const tituloModal = ref('Registrar Venta')
 const ventaSeleccionada = ref<VentaApi | null>(null)
+
+// ---------- Espejo de app (para "Espectar" del profesor) ----------
+const snapshotEspejo = computed(() => ({
+  tipo: 'tabla',
+  titulo: 'Ventas',
+  filtro: busqueda.value,
+  totalRegistros: itemsFiltrados.value.length,
+  accion: mostrarModal.value ? tituloModal.value : 'Viendo la tabla',
+  elemento: mostrarModal.value ? (ventaSeleccionada.value?.numero_factura ?? null) : null
+}))
+useEspejoApp('/venta', snapshotEspejo)
 
 const abrirModal = () => {
   tituloModal.value = 'Registrar Venta'

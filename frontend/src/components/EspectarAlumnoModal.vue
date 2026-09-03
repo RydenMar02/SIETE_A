@@ -13,15 +13,56 @@
 
       <div class="flex-1 overflow-y-auto px-4 py-4">
         <p v-if="!estado" class="text-center text-gray-400 text-sm py-10">
-          Esperando a que {{ nombreAlumno }} empiece a cargar algo...
+          Esperando a que {{ nombreAlumno }} empiece a hacer algo...
         </p>
 
-        <p v-else-if="estado.ruta !== '/asiento'" class="text-center text-gray-400 text-sm py-10">
-          {{ nombreAlumno }} no está en la pantalla de Asiento contable en este momento
-          ({{ etiquetaPagina }}), así que no hay un formulario para mostrar acá todavía.
+        <!-- Pantalla genérica: cubre cualquier tabla/listado instrumentado
+             (Clientes, Proveedores, Empresas, Cuentas, Compras, Ventas,
+             Sucursales). No es el detalle campo-a-campo de Asiento, pero
+             muestra qué está mirando y si tiene un modal de carga/edición
+             abierto — que es lo que hacía falta para no depender de que
+             el alumno esté justo en Asiento para poder espectarlo. -->
+        <div v-else-if="formulario.tipo === 'tabla'" class="flex flex-col gap-4 text-sm">
+          <div>
+            <p class="text-xs text-gray-500 mb-1">Pantalla</p>
+            <p class="font-medium text-gray-900">{{ formulario.titulo || etiquetaPagina }}</p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <p class="text-xs text-gray-500 mb-1">Buscando</p>
+              <p class="text-gray-900">{{ formulario.filtro || '—' }}</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500 mb-1">Resultados visibles</p>
+              <p class="text-gray-900">{{ formulario.totalRegistros ?? '—' }}</p>
+            </div>
+          </div>
+
+          <div
+            class="rounded-lg px-3 py-2 border"
+            :class="formulario.accion === 'Viendo la tabla'
+              ? 'bg-gray-50 border-gray-100'
+              : 'bg-amber-50 border-amber-200'"
+          >
+            <p class="text-xs font-medium mb-1" :class="formulario.accion === 'Viendo la tabla' ? 'text-gray-500' : 'text-amber-700'">
+              {{ formulario.accion === 'Viendo la tabla' ? 'Estado' : 'Haciendo ahora' }}
+            </p>
+            <p class="text-gray-800">
+              {{ formulario.accion }}
+              <span v-if="formulario.elemento"> — {{ formulario.elemento }}</span>
+            </p>
+          </div>
+        </div>
+
+        <!-- Ni siquiera "tabla" genérico: está en una pantalla sin
+             instrumentar (ej. Inicio, Perfil) o todavía no llegó ningún
+             estado nuevo. Al menos mostramos en qué ruta está. -->
+        <p v-else-if="estado" class="text-center text-gray-400 text-sm py-10">
+          {{ nombreAlumno }} está en {{ etiquetaPagina }}, sin más detalle disponible ahí.
         </p>
 
-        <div v-else class="flex flex-col gap-4 text-sm">
+        <div v-if="formulario.tipo === 'asiento'" class="flex flex-col gap-4 text-sm">
           <!-- Cabecera del asiento -->
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div>
@@ -101,14 +142,28 @@
         </div>
       </div>
 
-      <div class="border-t border-gray-100 px-4 py-3 flex justify-end">
-        <button
-          type="button"
-          class="bg-slate-700 hover:bg-slate-800 text-white text-sm font-medium px-4 py-2 rounded-lg transition"
-          @click="cerrar"
-        >
-          Cerrar
-        </button>
+      <div class="border-t border-gray-100 px-4 py-3 flex flex-col gap-2">
+        <!-- Mientras espectás, le podés dejar un comentario puntual sin
+             tener que salir del panel (ej. "revisá la cuenta Caja"). Usa
+             el mismo canal de mensajería de Seguimiento en aula. -->
+        <form class="flex gap-2" @submit.prevent="enviarComentario">
+          <input
+            v-model="textoMensaje"
+            type="text"
+            maxlength="500"
+            :placeholder="`Dejale un comentario a ${nombreAlumno}...`"
+            class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+          />
+          <button type="submit" class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 rounded-lg transition">
+            Enviar
+          </button>
+        </form>
+        <div class="flex items-center justify-between">
+          <p class="text-xs text-green-600" :class="{ 'invisible': !mensajeEnviado }">Comentario enviado ✓</p>
+          <button type="button" class="text-sm text-gray-500 hover:text-gray-800 underline" @click="cerrar">
+            Cerrar
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -132,16 +187,24 @@ const emit = defineEmits<{ (e: 'cerrar'): void }>()
 
 const tiempoReal = useTiempoRealStore()
 
-interface FormularioAsiento {
-  sucursal: string | null
-  tipoAsiento: string
-  numeroAsiento: string
-  concepto: string
+interface FormularioEspectado {
+  tipo?: string
+  // Posibles campos del snapshot de Asiento (formulario detallado)
+  sucursal?: string | null
+  tipoAsiento?: string
+  numeroAsiento?: string
+  concepto?: string
   renglonEnCarga?: { codigo: string; cuenta: string; debe: string; haber: string }
-  renglones: { codigo: string; nombre: string; debe: number; haber: number }[]
-  totalDebe: number
-  totalHaber: number
-  diferencia: number
+  renglones?: { codigo: string; nombre: string; debe: number; haber: number }[]
+  totalDebe?: number
+  totalHaber?: number
+  diferencia?: number
+  // Posibles campos del snapshot genérico de tabla (Cliente, Empresa, etc.)
+  titulo?: string
+  filtro?: string
+  totalRegistros?: number
+  accion?: string
+  elemento?: string | null
 }
 
 // Solo mostramos el estado si es del alumno que se está espectando puntualmente
@@ -151,7 +214,7 @@ const estado = computed(() => {
   return e && e.id_alumno === props.idAlumno ? e : null
 })
 
-const formulario = computed(() => (estado.value?.formulario ?? {}) as unknown as FormularioAsiento)
+const formulario = computed(() => (estado.value?.formulario ?? {}) as unknown as FormularioEspectado)
 
 const hayRenglonEnCarga = computed(() => {
   const r = formulario.value.renglonEnCarga
@@ -189,12 +252,30 @@ const tiempoRelativo = computed(() => {
 
 const cerrar = () => emit('cerrar')
 
+// ---------- Comentario mientras se espectá ----------
+const textoMensaje = ref('')
+const mensajeEnviado = ref(false)
+let temporizadorConfirmacion: ReturnType<typeof setTimeout> | null = null
+
+const enviarComentario = () => {
+  const texto = textoMensaje.value.trim()
+  if (!texto) return
+
+  tiempoReal.enviarMensaje(props.idSala, props.idAlumno, texto)
+  textoMensaje.value = ''
+
+  mensajeEnviado.value = true
+  if (temporizadorConfirmacion) clearTimeout(temporizadorConfirmacion)
+  temporizadorConfirmacion = setTimeout(() => { mensajeEnviado.value = false }, 2500)
+}
+
 onMounted(() => {
   tiempoReal.espectarAlumno(props.idSala, props.idAlumno)
 })
 
 onBeforeUnmount(() => {
   clearInterval(intervalo)
+  if (temporizadorConfirmacion) clearTimeout(temporizadorConfirmacion)
   tiempoReal.dejarDeEspectar(props.idSala, props.idAlumno)
 })
 </script>

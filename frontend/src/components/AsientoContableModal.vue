@@ -187,10 +187,10 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useAlertas } from '@/composables/useAlertas'
 import { useSeleccionStore } from '@/stores/useSeleccionStore'
-import { useTiempoRealStore } from '@/stores/useTiempoRealStore'
+import { useEspejoApp } from '@/composables/useEspejoapp'
 import { formatearImporte, parsearImporte, toNumberSafe } from '@/composables/useFacturaCalculo'
 import ModalCuentaEmpresa from '@/components/CuentaEmpresaModal.vue'
 import { obtenerSucursales, type Sucursal } from '@/services/sucursalService'
@@ -206,7 +206,6 @@ const emit = defineEmits<{
 
 const { makeToast, makeConfirm } = useAlertas()
 const seleccion = useSeleccionStore()
-const tiempoReal = useTiempoRealStore()
 
 
 // ---------- Sucursales ----------
@@ -374,6 +373,7 @@ const nombreSucursalSeleccionada = computed(
 )
 
 const snapshotFormulario = computed(() => ({
+  tipo: 'asiento',
   sucursal: nombreSucursalSeleccionada.value,
   tipoAsiento: tipoAsiento.value,
   numeroAsiento: numeroAsiento.value,
@@ -385,19 +385,7 @@ const snapshotFormulario = computed(() => ({
   diferencia: diferencia.value
 }))
 
-let temporizadorEstado: ReturnType<typeof setTimeout> | null = null
-watch(snapshotFormulario, (estado) => {
-  if (temporizadorEstado) clearTimeout(temporizadorEstado)
-  // Throttle de 400ms: alcanza para verse "en vivo" sin mandar un evento
-  // por cada tecla que tipea el alumno.
-  temporizadorEstado = setTimeout(() => {
-    tiempoReal.emitirEstadoApp(seleccion.idSala, '/asiento', estado)
-  }, 400)
-}, { deep: true, immediate: true })
-
-onBeforeUnmount(() => {
-  if (temporizadorEstado) clearTimeout(temporizadorEstado)
-})
+useEspejoApp('/asiento', snapshotFormulario)
 
 // ---------- Cerrar modal ----------
 const pedirCerrar = () => {

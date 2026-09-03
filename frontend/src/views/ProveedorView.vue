@@ -116,6 +116,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useAlertas } from '@/composables/useAlertas'
 import { useSeleccionStore } from '@/stores/useSeleccionStore'
+import { useEspejoApp } from '@/composables/useEspejoapp'
 import Navbar from '@/components/NavbarComponent.vue'
 import Siderbar from '@/components/SiderbarComponent.vue'
 import ClienteProveedorModal from '@/components/ClienteProveedorModal.vue'
@@ -188,6 +189,17 @@ watch(columnaFiltro, () => { pagina.value = 1 })
 const mostrarModal = ref(false)
 const tituloModal = ref('Registrar Proveedor')
 const proveedorSeleccionado = ref<ClienteProveedorDetalle | null>(null)
+
+// ---------- Espejo de app (para "Espectar" del profesor) ----------
+const snapshotEspejo = computed(() => ({
+  tipo: 'tabla',
+  titulo: 'Proveedores',
+  filtro: busqueda.value,
+  totalRegistros: proveedoresFiltrados.value.length,
+  accion: mostrarModal.value ? tituloModal.value : 'Viendo la tabla',
+  elemento: mostrarModal.value ? (proveedorSeleccionado.value?.razon_social ?? null) : null
+}))
+useEspejoApp('/proveedor', snapshotEspejo)
 
 const abrirModal = () => {
   tituloModal.value = 'Registrar Proveedor'

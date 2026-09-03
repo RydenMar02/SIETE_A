@@ -152,6 +152,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useAlertas } from '@/composables/useAlertas'
 import { useSeleccionStore } from '@/stores/useSeleccionStore'
+import { useEspejoApp } from '@/composables/useEspejoapp'
 import { aplanarCuentas } from '@/composables/useCuentasArbol'
 import Navbar from '@/components/NavbarComponent.vue'
 import Siderbar from '@/components/SiderbarComponent.vue'
@@ -209,6 +210,17 @@ const mostrarModal = ref(false)
 const tituloModal = ref('Cargar Nueva Cuenta')
 const subtituloModal = ref('Ingrese todos los datos de la Cuenta')
 const itemSeleccionado = ref<CuentaAplanada | undefined>(undefined)
+
+// ---------- Espejo de app (para "Espectar" del profesor) ----------
+const snapshotEspejo = computed(() => ({
+  tipo: 'tabla',
+  titulo: 'Plan de cuentas',
+  filtro: busqueda.value,
+  totalRegistros: itemsFiltrados.value.length,
+  accion: mostrarModal.value ? tituloModal.value : 'Viendo la tabla',
+  elemento: mostrarModal.value ? (itemSeleccionado.value?.nombre ?? null) : null
+}))
+useEspejoApp('/cuentas', snapshotEspejo)
 
 const abrirModal = () => {
   tituloModal.value = 'Cargar Nueva Cuenta'

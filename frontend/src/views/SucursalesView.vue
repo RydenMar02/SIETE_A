@@ -103,6 +103,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useAlertas } from '@/composables/useAlertas'
 import { useSeleccionStore } from '@/stores/useSeleccionStore'
+import { useEspejoApp } from '@/composables/useEspejoapp'
 import Navbar from '@/components/NavbarComponent.vue'
 import Siderbar from '@/components/SiderbarComponent.vue'
 import ModalSucursal from '@/components/SucursalesModal.vue'
@@ -169,6 +170,17 @@ const mostrarModal = ref(false)
 const tituloModal = ref('Cargar Nueva Sucursal')
 const subtituloModal = ref('Ingrese todos los datos de la nueva sucursal')
 const itemSeleccionado = ref<SucursalDetalle | undefined>(undefined)
+
+// ---------- Espejo de app (para "Espectar" del profesor) ----------
+const snapshotEspejo = computed(() => ({
+  tipo: 'tabla',
+  titulo: 'Sucursales',
+  filtro: busqueda.value,
+  totalRegistros: itemsFiltrados.value.length,
+  accion: mostrarModal.value ? tituloModal.value : 'Viendo la tabla',
+  elemento: mostrarModal.value ? (itemSeleccionado.value?.nombre ?? null) : null
+}))
+useEspejoApp('/sucursal', snapshotEspejo)
 
 const abrirModal = () => {
   tituloModal.value = 'Cargar Nueva Sucursal'
