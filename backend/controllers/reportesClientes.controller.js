@@ -1,13 +1,13 @@
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { readFileSync } from 'fs';
-import puppeteer from 'puppeteer';
 import { create } from 'express-handlebars';
 import ClienteProveedor from '../models/clienteProveedor.js';
 import Empresa from '../models/empresa.js';
 import Ciudad from '../models/ciudad.js';
 import { puedeAccederAEmpresa } from '../middlewares/pertenencia.middleware.js';
 import { registrarMovimiento } from '../helpers/registrarMovimiento.js';
+import { generarYEnviarPdf } from '../helpers/reportesHelper.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const hbs = create();
@@ -67,15 +67,6 @@ export const reporteClientesPDF = async (req, res) => {
             unc: `${baseURL}/images/unc.png`
         });
 
-        const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
-        const page = await browser.newPage();
-        await page.setContent(html, { waitUntil: 'networkidle0' });
-        const outputPath = join(__dirname, '../reports/reporte_clientes.pdf');
-        await page.pdf({ path: outputPath, format: 'A4', printBackground: true, margin: { top: '20mm', bottom: '20mm', left: '15mm', right: '15mm' } });
-        await browser.close();
-
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', 'inline; filename=reporte_clientes.pdf');
         await registrarMovimiento({
             id_usuario: req.usuario.id_usuario,
             id_empresa: parseInt(id_empresa),
@@ -83,7 +74,7 @@ export const reporteClientesPDF = async (req, res) => {
             descripcion: 'Generó el PDF del listado de clientes'
         });
 
-        res.sendFile(outputPath);
+        await generarYEnviarPdf(res, html, 'reporte_clientes');
     } catch (error) {
         console.error(error);
         res.status(500).json({ msg: 'Error al generar PDF de clientes' });

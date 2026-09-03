@@ -178,7 +178,9 @@ export const reporteLibroMayorPDF = async (req, res) => {
         const templateSource = readFileSync(join(__dirname, '../views/reportelibromayor.handlebars'), 'utf-8');
         const html = hbs.handlebars.compile(templateSource)({
             empresa: empresa?.nombre || 'Sin empresa',
-            cuenta: { codigo: cuenta.codigo, nombre: cuenta.nombre },
+            cuenta: { codigo: cuenta.codigo, nombre: cuenta.nombre, naturaleza: cuenta.naturaleza },
+            fecha_desde,
+            fecha_hasta,
             saldo_inicial: saldo_inicial.toLocaleString('es-PY'),
             movimientos: movimientosPlanos,
             saldo_final: saldo_final.toLocaleString('es-PY'),

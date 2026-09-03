@@ -66,59 +66,66 @@
       text-align: center;
       color: #2c3e50;
       margin-top: 5px;
-      margin-bottom: 15px;
+      margin-bottom: 10px;
       font-size: 13pt;
       text-transform: uppercase;
       position: relative;
       z-index: 2;
     }
 
-    /* Formato T contable */
-    .cuenta {
-      margin: 10px 0 20px 0;
-      border: 1px solid #000;
-      border-radius: 5px;
-      padding: 5px 10px;
-      page-break-inside: avoid;
+    /* INFO DE LA CUENTA */
+    .cuenta-info {
+      padding: 0 20px;
+      margin-bottom: 10px;
+      position: relative;
+      z-index: 2;
     }
 
-    .cuenta h3 {
+    .cuenta-info h3 {
+      margin: 0 0 4px 0;
       font-size: 10pt;
-      margin: 0 0 5px 0;
-      text-transform: uppercase;
-      color: #2c3e50;
     }
 
-    table.mayor {
+    .cuenta-info .rango {
+      font-size: 8pt;
+      color: #333;
+    }
+
+    /* TABLA DE MOVIMIENTOS */
+    table {
       width: 100%;
       border-collapse: collapse;
-      margin-bottom: 5px;
-    }
-
-    table.mayor th,
-    table.mayor td {
-      border: 1px solid #000;
-      padding: 4px 5px;
       font-size: 8pt;
+      margin: 0 auto;
+      position: relative;
+      z-index: 2;
     }
 
-    table.mayor th {
-      background-color: #f8f8f8;
-      text-align: center;
-      font-weight: bold;
+    th,
+    td {
+      border: 1px solid #000;
+      padding: 3px 5px;
+      text-align: left;
     }
 
-    table.mayor td {
-      height: 18px;
-      vertical-align: top;
-    }
-
-    .saldo {
-      text-align: right;
-      font-weight: bold;
-      border-top: 2px solid #000;
-      padding-top: 3px;
+    th {
       font-size: 9pt;
+      text-align: center;
+      background-color: #f8f8f8;
+    }
+
+    .saldo-inicial td,
+    .saldo-final td {
+      font-weight: bold;
+      background-color: #f8f8f8;
+    }
+
+    .sin-movimientos {
+      padding: 10px 20px;
+      font-style: italic;
+      color: #555;
+      position: relative;
+      z-index: 2;
     }
 
     /* MARCA DE AGUA */
@@ -127,18 +134,10 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      opacity: 0.1;
+      opacity: 0.15;
       z-index: 0;
-      width: 400px;
+      width: 380px;
       pointer-events: none;
-    }
-
-    .footer {
-      display: flex;
-      justify-content: flex-end;
-      font-size: 8pt;
-      margin-top: 15px;
-      padding-right: 20px;
     }
   </style>
 </head>
@@ -164,30 +163,75 @@
 
   <h1>LIBRO MAYOR</h1>
 
-  {{#each registros}}
-  <div class="cuenta">
-    <h3>{{codigo_cuenta}} — {{nombre_cuenta}}</h3>
-
-    <table class="mayor">
-      <thead>
-        <tr>
-          <th>Debe (Gs.)</th>
-          <th>Haber (Gs.)</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td style="text-align:right;">{{total_debe}}</td>
-          <td style="text-align:right;">{{total_haber}}</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <div class="saldo">
-      Saldo: {{saldo}} Gs.
-    </div>
+  <div class="cuenta-info">
+    <h3>{{cuenta.codigo}} — {{cuenta.nombre}} ({{cuenta.naturaleza}})</h3>
+    {{#if fecha_desde}}
+      {{#if fecha_hasta}}
+        <div class="rango">Período: {{fecha_desde}} a {{fecha_hasta}}</div>
+      {{else}}
+        <div class="rango">Desde: {{fecha_desde}}</div>
+      {{/if}}
+    {{else}}
+      {{#if fecha_hasta}}
+      <div class="rango">Hasta: {{fecha_hasta}}</div>
+      {{else}}
+      <div class="rango">Todo el historial disponible</div>
+      {{/if}}
+    {{/if}}
   </div>
-  {{/each}}
+
+  {{#if movimientos}}
+  <table>
+    <thead>
+      <tr>
+        <th>Fecha</th>
+        <th>N° Asiento</th>
+        <th>Documento</th>
+        <th>Concepto</th>
+        <th>Debe (Gs.)</th>
+        <th>Haber (Gs.)</th>
+        <th>Saldo (Gs.)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="saldo-inicial">
+        <td colspan="6" style="text-align:right;">Saldo inicial:</td>
+        <td style="text-align:right;">{{saldo_inicial}}</td>
+      </tr>
+      {{#each movimientos}}
+      <tr>
+        <td>{{fecha}}</td>
+        <td>{{numero_asiento}}</td>
+        <td>{{documento}}</td>
+        <td>{{concepto}}</td>
+        <td style="text-align:right;">{{debe}}</td>
+        <td style="text-align:right;">{{haber}}</td>
+        <td style="text-align:right;">{{saldo}}</td>
+      </tr>
+      {{/each}}
+      <tr class="saldo-final">
+        <td colspan="6" style="text-align:right;">Saldo final:</td>
+        <td style="text-align:right;">{{saldo_final}}</td>
+      </tr>
+    </tbody>
+  </table>
+  {{else}}
+  <p class="sin-movimientos">
+    No existen movimientos para la cuenta y período seleccionados.
+  </p>
+  <table>
+    <tbody>
+      <tr class="saldo-inicial">
+        <td style="text-align:right; width:85%;">Saldo inicial:</td>
+        <td style="text-align:right;">{{saldo_inicial}}</td>
+      </tr>
+      <tr class="saldo-final">
+        <td style="text-align:right;">Saldo final:</td>
+        <td style="text-align:right;">{{saldo_final}}</td>
+      </tr>
+    </tbody>
+  </table>
+  {{/if}}
 
   <img src="{{marcaAgua}}" class="marca-agua" alt="Marca de agua">
 

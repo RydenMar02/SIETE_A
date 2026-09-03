@@ -49,6 +49,7 @@ const SQL_SALDOS_POR_RAIZ = `
     WHERE ac.id_empresa = :id_empresa
       AND ac.estado != 'anulado'
       /*FILTRO_FECHA*/
+      /*FILTRO_CIERRE*/
     GROUP BY ec.id_empresacuenta, ec.codigo, ec.nombre, raiz.codigo, raiz.nombre, raiz.naturaleza
     ORDER BY raiz.codigo, ec.codigo
 `;
@@ -89,11 +90,20 @@ const agruparPorRaiz = (filas) => {
  * Trae las filas planas (una por cuenta con movimiento), ya con su raíz
  * resuelta. filtroFecha es opcional -{fecha_desde, fecha_hasta}-; sin él,
  * se conserva el comportamiento histórico (se llama así, sin segundo
- * argumento, desde ejercicio.controller.js para el cierre de ejercicio).
+ * argumento, desde ejercicio.controller.js para el cierre de ejercicio
+ * cuando corresponde ver todo el patrimonio acumulado).
+ *
+ * opciones.excluirCierre (default false, retrocompatible): si es true,
+ * excluye de la suma los asientos con tipo_asiento='CIERRE' -formalmente,
+ * ahora que la migración de ENUM está aplicada. Lo usa Estado de
+ * Resultados y la propia generación del cierre; Balance General NO lo usa
+ * a propósito (ver análisis en la etapa anterior: su mecanismo de
+ * reversión ya evita la duplicación sin necesitar excluir nada).
  */
-export const obtenerSaldosConRaiz = async (id_empresa, filtroFecha = {}) => {
+export const obtenerSaldosConRaiz = async (id_empresa, filtroFecha = {}, opciones = {}) => {
     const { fragmento, replacements } = construirFiltroFechaSQL(filtroFecha.fecha_desde, filtroFecha.fecha_hasta);
-    const sql = SQL_SALDOS_POR_RAIZ.replace('/*FILTRO_FECHA*/', fragmento);
+    let sql = SQL_SALDOS_POR_RAIZ.replace('/*FILTRO_FECHA*/', fragmento);
+    sql = sql.replace('/*FILTRO_CIERRE*/', opciones.excluirCierre ? "AND ac.tipo_asiento != 'CIERRE'" : '');
     const [filas] = await db.query(sql, { replacements: { id_empresa, ...replacements } });
     return filas;
 };
@@ -104,10 +114,11 @@ export const obtenerSaldosConRaiz = async (id_empresa, filtroFecha = {}) => {
  * ejercicio (positivo = ganancia, negativo = pérdida).
  * Se exporta como función reusable porque el Balance General también
  * necesita este número para poder cerrar (activo = pasivo + patrimonio).
- * filtroFecha es opcional, mismo comportamiento que obtenerSaldosConRaiz.
+ * filtroFecha y opciones son opcionales, mismo comportamiento retrocompatible
+ * que obtenerSaldosConRaiz.
  */
-export const calcularEstadoResultados = async (id_empresa, filtroFecha = {}) => {
-    const filas = await obtenerSaldosConRaiz(id_empresa, filtroFecha);
+export const calcularEstadoResultados = async (id_empresa, filtroFecha = {}, opciones = {}) => {
+    const filas = await obtenerSaldosConRaiz(id_empresa, filtroFecha, opciones);
     const gruposTodos = agruparPorRaiz(filas);
     const grupos = gruposTodos.filter(g => !CODIGOS_BALANCE_GENERAL.includes(g.codigo_raiz));
 
@@ -187,7 +198,7 @@ export const getEstadoResultados = async (req, res) => {
             filtroFecha = { fecha_desde: fd, fecha_hasta: fh };
         }
 
-        const { grupos, resultado_neto } = await calcularEstadoResultados(idEmpresaNum, filtroFecha);
+        const { grupos, resultado_neto } = await calcularEstadoResultados(idEmpresaNum, filtroFecha, { excluirCierre: true });
 
         res.json({
             empresa: empresa.nombre,

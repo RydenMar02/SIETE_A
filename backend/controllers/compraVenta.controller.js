@@ -8,6 +8,7 @@ import AsientoDetalle from '../models/asientoDetalle.js';
 import db from '../db/conexion.js';
 import { puedeAccederAEmpresa } from '../middlewares/pertenencia.middleware.js';
 import { registrarMovimiento } from '../helpers/registrarMovimiento.js';
+import { validarEjercicioAbiertoParaEscritura } from '../helpers/ejercicioHelper.js';
 
 // Códigos del plan de cuentas estándar usados para resolver la cuenta de
 // contrapartida y la de IVA, que no vienen elegidas por el usuario en el
@@ -325,6 +326,14 @@ export const crearCompraVenta = async (req, res) => {
             return res.status(403).json({ msg: 'No tenés permiso para cargar compras/ventas en esta empresa' });
         }
 
+        const ejercicioCerrado = await validarEjercicioAbiertoParaEscritura(id_empresa, req.body.fecha, transaction);
+        if (ejercicioCerrado) {
+            await transaction.rollback();
+            return res.status(400).json({
+                msg: `La fecha indicada pertenece al ejercicio "${ejercicioCerrado.nombre}", que ya está cerrado. No se pueden registrar operaciones en ese período.`
+            });
+        }
+
         const tipoOperacion = req.body.tipo?.toUpperCase();
 
         const errorClienteProveedor = await validarClienteProveedor(
@@ -412,6 +421,16 @@ export const imputarCompraVenta = async (req, res) => {
             return res.status(400).json({ msg: 'La sucursal indicada no existe' });
         }
         const id_empresa = sucursal.id_empresa;
+
+        // Cubre el escenario: borrador creado antes del cierre -> el
+        // ejercicio se cierra -> alguien intenta imputarlo después.
+        const ejercicioCerrado = await validarEjercicioAbiertoParaEscritura(id_empresa, registro.fecha, transaction);
+        if (ejercicioCerrado) {
+            await transaction.rollback();
+            return res.status(400).json({
+                msg: `Esta operación pertenece al ejercicio "${ejercicioCerrado.nombre}", que ya está cerrado. No se puede imputar.`
+            });
+        }
 
         const errorClienteProveedor = await validarClienteProveedor(
             registro.id_clienteproveedor, registro.tipo, id_empresa, transaction
@@ -531,14 +550,17 @@ export const imputarCompraVenta = async (req, res) => {
 export const actualizarCompraVenta = async (req, res) => {
     const { id } = req.params;
     const { imputada, id_compraventa, tipo, ...datosEditables } = req.body;
+    const transaction = await db.transaction();
 
     try {
-        const registro = await CompraVenta.findByPk(id);
+        const registro = await CompraVenta.findByPk(id, { transaction });
         if (!registro) {
+            await transaction.rollback();
             return res.status(404).json({ msg: 'Registro no encontrado' });
         }
 
         if (registro.imputada === 'SI') {
+            await transaction.rollback();
             return res.status(400).json({ msg: 'No se puede modificar una factura ya imputada' });
         }
 
@@ -547,20 +569,46 @@ export const actualizarCompraVenta = async (req, res) => {
         const numero_timbrado_efectivo = datosEditables.numero_timbrado ?? registro.numero_timbrado;
         const numero_factura_efectivo = datosEditables.numero_factura ?? registro.numero_factura;
 
-        const sucursal = await Sucursal.findByPk(id_sucursal_efectivo);
+        const sucursal = await Sucursal.findByPk(id_sucursal_efectivo, { transaction });
         if (!sucursal) {
+            await transaction.rollback();
             return res.status(400).json({ msg: 'La sucursal indicada no existe' });
         }
         const id_empresa = sucursal.id_empresa;
 
         if (!(await puedeAccederAEmpresa(req, id_empresa))) {
+            await transaction.rollback();
             return res.status(403).json({ msg: 'No tenés permiso para modificar compras/ventas en esta empresa' });
         }
 
+        // Bloqueo post-cierre, en dos sentidos: la fecha ORIGINAL de la
+        // operación ya cerrada, y si el body trae una fecha NUEVA, que
+        // tampoco la mueva hacia adentro de un ejercicio cerrado. Usa la
+        // validación BLOQUEANTE (toma el lock de la fila de Ejercicio
+        // dentro de esta misma transacción) para cerrar la carrera con un
+        // cierre que pueda estar en curso simultáneamente.
+        const ejercicioCerradoOriginal = await validarEjercicioAbiertoParaEscritura(id_empresa, registro.fecha, transaction);
+        if (ejercicioCerradoOriginal) {
+            await transaction.rollback();
+            return res.status(400).json({
+                msg: `Esta operación pertenece al ejercicio "${ejercicioCerradoOriginal.nombre}", que ya está cerrado. No se puede modificar.`
+            });
+        }
+        if (datosEditables.fecha !== undefined && datosEditables.fecha !== registro.fecha) {
+            const ejercicioCerradoNuevo = await validarEjercicioAbiertoParaEscritura(id_empresa, datosEditables.fecha, transaction);
+            if (ejercicioCerradoNuevo) {
+                await transaction.rollback();
+                return res.status(400).json({
+                    msg: `No se puede mover la operación a una fecha del ejercicio "${ejercicioCerradoNuevo.nombre}", que ya está cerrado.`
+                });
+            }
+        }
+
         const errorClienteProveedor = await validarClienteProveedor(
-            id_clienteproveedor_efectivo, registro.tipo, id_empresa, null
+            id_clienteproveedor_efectivo, registro.tipo, id_empresa, transaction
         );
         if (errorClienteProveedor) {
+            await transaction.rollback();
             return res.status(errorClienteProveedor.status).json({ msg: errorClienteProveedor.msg });
         }
 
@@ -571,9 +619,10 @@ export const actualizarCompraVenta = async (req, res) => {
             numero_timbrado_efectivo,
             numero_factura_efectivo,
             registro.id_compraventa,
-            null
+            transaction
         );
         if (duplicado) {
+            await transaction.rollback();
             return res.status(409).json({
                 msg: `Ya existe ${registro.tipo === 'COMPRA' ? 'otra compra' : 'otra venta'} activa con el mismo número de factura y timbrado para ${registro.tipo === 'COMPRA' ? 'este proveedor' : 'esta sucursal'}`
             });
@@ -589,25 +638,30 @@ export const actualizarCompraVenta = async (req, res) => {
         ];
         for (const cuentaLinea of cuentasAValidar) {
             if (cuentaLinea.id_empresacuenta) {
-                const errorCuenta = await validarCuentaDeContenido(cuentaLinea.id_empresacuenta, id_empresa, cuentaLinea.etiqueta, null);
+                const errorCuenta = await validarCuentaDeContenido(cuentaLinea.id_empresacuenta, id_empresa, cuentaLinea.etiqueta, transaction);
                 if (errorCuenta) {
+                    await transaction.rollback();
                     return res.status(errorCuenta.status).json({ msg: errorCuenta.msg });
                 }
             }
         }
 
-        await registro.update(datosEditables);
+        await registro.update(datosEditables, { transaction });
 
         await registrarMovimiento({
             id_usuario: req.usuario.id_usuario,
             id_empresa,
             tipo: registro.tipo === 'COMPRA' ? 'MODIFICO_COMPRA' : 'MODIFICO_VENTA',
             descripcion: `Modificó la ${registro.tipo === 'COMPRA' ? 'compra' : 'venta'} N° ${registro.numero_factura}`,
-            referencia_id: registro.id_compraventa
+            referencia_id: registro.id_compraventa,
+            transaction
         });
+
+        await transaction.commit();
 
         res.json({ msg: 'Registro actualizado', registro });
     } catch (error) {
+        await transaction.rollback();
         console.error(error);
         res.status(500).json({ msg: 'Error al actualizar registro' });
     }
@@ -686,6 +740,17 @@ export const anularCompraVenta = async (req, res) => {
             await transaction.rollback();
             return res.status(400).json({
                 msg: 'Solo se puede anular una compra/venta que ya fue imputada. Un borrador se desactiva con el DELETE correspondiente.'
+            });
+        }
+
+        // C.6: no se puede alterar retroactivamente un ejercicio ya
+        // cerrado. No se genera ningún asiento de reversión -simplemente
+        // se rechaza la anulación.
+        const ejercicioCerrado = await validarEjercicioAbiertoParaEscritura(id_empresa, registro.fecha, transaction);
+        if (ejercicioCerrado) {
+            await transaction.rollback();
+            return res.status(400).json({
+                msg: `Esta operación pertenece al ejercicio "${ejercicioCerrado.nombre}", que ya está cerrado. No se puede anular.`
             });
         }
 
