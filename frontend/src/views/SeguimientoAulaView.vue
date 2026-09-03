@@ -52,9 +52,11 @@
                   </button>
                   <button
                     type="button"
-                    disabled
-                    title="Próximamente"
-                    class="flex-1 bg-gray-200 text-gray-400 text-xs font-medium py-1.5 rounded-md cursor-not-allowed"
+                    :disabled="!alumno.conectado"
+                    :title="alumno.conectado ? '' : 'El alumno está desconectado'"
+                    class="flex-1 text-white text-xs font-medium py-1.5 rounded-md transition"
+                    :class="alumno.conectado ? 'bg-amber-600 hover:bg-amber-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'"
+                    @click="abrirEspectar(alumno)"
                   >
                     Espectar
                   </button>
@@ -76,6 +78,15 @@
       :nombre-alumno="alumnoSeleccionado.nombre"
       @cerrar="alumnoSeleccionado = null"
     />
+
+    <!-- Espejo de app del alumno espectado: se suscribe/desuscribe solo -->
+    <EspectarAlumnoModal
+      v-if="alumnoEspectado"
+      :id-sala="seleccion.idSala"
+      :id-alumno="alumnoEspectado.id_usuario"
+      :nombre-alumno="alumnoEspectado.nombre"
+      @cerrar="alumnoEspectado = null"
+    />
   </div>
 </template>
 
@@ -83,7 +94,8 @@
 import { ref, computed, onMounted } from 'vue'
 import Navbar from '@/components/NavbarComponent.vue'
 import Siderbar from '@/components/SiderbarComponent.vue'
-import ChatConAlumnoModal from '@/components/ChatConAlumnoModal.vue'
+import ChatConAlumnoModal from '@/components/ChatconAlumnoModal.vue'
+import EspectarAlumnoModal from '@/components/EspectarAlumnoModal.vue'
 import { useSesionStore } from '@/stores/useSesionStore'
 import { useSeleccionStore } from '@/stores/useSeleccionStore'
 import { useTiempoRealStore, type AlumnoPresencia } from '@/stores/useTiempoRealStore'
@@ -165,6 +177,13 @@ const alumnoSeleccionado = ref<Alumno | null>(null)
 // ChatConAlumnoModal (también lo usa la campanita de Notificaciones).
 const abrirConversacion = (alumno: Alumno) => {
   alumnoSeleccionado.value = alumno
+}
+
+// ---------- Espectar a un alumno ----------
+const alumnoEspectado = ref<Alumno | null>(null)
+
+const abrirEspectar = (alumno: Alumno) => {
+  alumnoEspectado.value = alumno
 }
 
 onMounted(() => {

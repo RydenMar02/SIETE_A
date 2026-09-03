@@ -20,6 +20,15 @@ export interface MensajeEnVivo {
   createdAt: string
 }
 
+// Lo que un alumno va reportando de lo que está haciendo (no video, solo
+// el estado de su formulario) mientras algún profesor lo está espectando.
+export interface EstadoAppAlumno {
+  id_alumno: number
+  ruta: string
+  formulario: Record<string, unknown>
+  timestamp: number
+}
+
 // No lleva persist: true a propósito — el socket no se puede serializar, y
 // no tiene sentido "recordar" una conexión entre recargas: se reconecta
 // sola apenas el Navbar vuelve a montar.
@@ -31,6 +40,14 @@ export const useTiempoRealStore = defineStore('tiempoReal', () => {
   const presencia = ref<Record<number, AlumnoPresencia>>({})
   const mensajesNoLeidos = ref(0)
   const ultimosMensajes = ref<MensajeEnVivo[]>([])
+
+  // ---------- Espectar (lado profesor: qué está viendo ahora) ----------
+  // Solo el estado del último alumno espectado activamente — no tiene
+  // sentido cachear a todos, el panel muestra uno por vez.
+  const estadoEspectado = ref<EstadoAppAlumno | null>(null)
+
+  // ---------- Espectar (lado alumno: me están mirando o no) ----------
+  const siendoEspectado = ref(false)
 
   const conectar = () => {
     if (socket) return
@@ -71,6 +88,19 @@ export const useTiempoRealStore = defineStore('tiempoReal', () => {
     socket.on('contador-no-leidos', (cantidad: number) => {
       mensajesNoLeidos.value = cantidad
     })
+
+    // Lado profesor: llega el estado del alumno que se está espectando.
+    socket.on('estado-app-actualizado', (estado: EstadoAppAlumno) => {
+      estadoEspectado.value = estado
+    })
+
+    // Lado alumno: un profesor empezó/dejó de mirarme.
+    socket.on('te-estan-espectando', () => {
+      siendoEspectado.value = true
+    })
+    socket.on('dejaron-de-espectarte', () => {
+      siendoEspectado.value = false
+    })
   }
 
   const desconectar = () => {
@@ -81,6 +111,8 @@ export const useTiempoRealStore = defineStore('tiempoReal', () => {
     presencia.value = {}
     mensajesNoLeidos.value = 0
     ultimosMensajes.value = []
+    estadoEspectado.value = null
+    siendoEspectado.value = false
   }
 
   const unirseSala = (idSala: number) => {
@@ -102,8 +134,28 @@ export const useTiempoRealStore = defineStore('tiempoReal', () => {
     socket?.emit('marcar-leidos')
   }
 
+  // ---------- Espectar (lado profesor) ----------
+  const espectarAlumno = (idSala: number, idAlumno: number) => {
+    estadoEspectado.value = null // limpiamos lo del alumno anterior mientras llega lo nuevo
+    socket?.emit('espectar-alumno', { id_sala: idSala, id_alumno: idAlumno })
+  }
+
+  const dejarDeEspectar = (idSala: number, idAlumno: number) => {
+    socket?.emit('dejar-de-espectar', { id_sala: idSala, id_alumno: idAlumno })
+    estadoEspectado.value = null
+  }
+
+  // ---------- Espectar (lado alumno) ----------
+  // No emitimos si no hay nadie espectando (siendoEspectado en false):
+  // evita mandar cada tecla que tipea el alumno cuando no hace falta.
+  const emitirEstadoApp = (idSala: number, ruta: string, formulario: Record<string, unknown>) => {
+    if (!siendoEspectado.value) return
+    socket?.emit('estado-app-actualizado', { id_sala: idSala, ruta, formulario })
+  }
+
   return {
-    conectado, presencia, mensajesNoLeidos, ultimosMensajes,
-    conectar, desconectar, unirseSala, reportarActividad, enviarMensaje, marcarMensajesLeidos
+    conectado, presencia, mensajesNoLeidos, ultimosMensajes, estadoEspectado, siendoEspectado,
+    conectar, desconectar, unirseSala, reportarActividad, enviarMensaje, marcarMensajesLeidos,
+    espectarAlumno, dejarDeEspectar, emitirEstadoApp
   }
 })
