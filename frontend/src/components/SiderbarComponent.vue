@@ -137,7 +137,8 @@ const grupos: GrupoMenu[] = [
     roles: [2],
     items: [
       { label: 'Crear', icono: 'mdi:create-new-folder-outline', to: '/crearsala' },
-      { label: 'Seguimiento en aula', icono: 'mdi:monitor-eye', to: '/seguimiento-aula' }
+      { label: 'Seguimiento en aula', icono: 'mdi:monitor-eye', to: '/seguimiento-aula' },
+      { label: 'Historial de movimientos', icono: 'mdi:history', to: '/historial-movimientos' }
     ]
   },
   {

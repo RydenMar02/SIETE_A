@@ -6,6 +6,7 @@ import Empresa from '../models/empresa.js';
 import Sucursal from '../models/sucursal.js';
 import EmpresaCuenta from '../models/empresaCuenta.js';
 import CompraVenta from '../models/compraVenta.js';
+import ClienteProveedor from '../models/clienteProveedor.js';
 import { puedeAccederAEmpresa } from '../middlewares/pertenencia.middleware.js';
 import { registrarMovimiento } from '../helpers/registrarMovimiento.js';
 import { validarEjercicioAbiertoParaEscritura } from '../helpers/ejercicioHelper.js';
@@ -20,6 +21,21 @@ const includeCompleto = [
             model: EmpresaCuenta,
             as: 'empresaCuenta',
             attributes: ['id_empresacuenta', 'codigo', 'nombre', 'nombre_alternativo', 'naturaleza', 'asentable']
+        }]
+    },
+    // Solo viene poblado cuando el asiento se generó automáticamente al
+    // imputar una compra/venta (id_compraventa NOT NULL). El frontend lo
+    // usa para mostrar la factura de origen en modo solo lectura -no se
+    // puede "asociar" una compra/venta a mano: cada una ya tiene su único
+    // asiento, generado por POST /compras-ventas/:id/imputar.
+    {
+        model: CompraVenta,
+        as: 'compraVenta',
+        required: false,
+        attributes: ['id_compraventa', 'tipo', 'numero_factura', 'fecha', 'total_factura', 'condicion'],
+        include: [{
+            model: ClienteProveedor,
+            attributes: ['razon_social', 'numero_identificacion']
         }]
     }
 ];
@@ -106,8 +122,43 @@ const responderConflictoUnique = (error, res) => {
     return res.status(409).json({ msg: 'El registro entra en conflicto con datos existentes.' });
 };
 
+const PREFIJOS_TIPO_ASIENTO = { MANUAL: 'M', COMPRA: 'C', VENTA: 'V', AJUSTE: 'A', CIERRE: 'X' };
+
+/**
+ * Genera el próximo número para un tipo de asiento dentro de una empresa,
+ * SIN confiar en lo que mande el cliente -si dos guardados llegan casi
+ * juntos (misma empresa, mismo tipo), cada uno calculaba su número del
+ * lado del navegador y podían pisarse.
+ *
+ * Usa un SELECT ... FOR UPDATE (lock: transaction.LOCK.UPDATE) sobre el
+ * último asiento de esa empresa+tipo: si otra transacción está generando
+ * un número para la misma combinación en simultáneo, esta lectura queda
+ * esperando a que la otra termine (commit o rollback) en vez de leer un
+ * dato que todavía puede cambiar -mismo patrón que ya usa
+ * validarEjercicioAbiertoParaEscritura en ejercicioHelper.js.
+ *
+ * Límite conocido: si es el PRIMER asiento de esa empresa+tipo, no hay
+ * ninguna fila que bloquear todavía, así que ese caso puntual conserva una
+ * ventana de carrera mínima -por eso crearAsiento igual reintenta ante un
+ * choque real; el UNIQUE de BD es la protección final en cualquier caso.
+ */
+const generarSiguienteNumeroAsiento = async (id_empresa, tipo_asiento, transaction) => {
+    const prefijo = PREFIJOS_TIPO_ASIENTO[tipo_asiento] || 'M';
+
+    const ultimo = await AsientoCabecera.findOne({
+        where: { id_empresa, tipo_asiento },
+        order: [['numero_asiento', 'DESC']],
+        transaction,
+        lock: transaction.LOCK.UPDATE
+    });
+
+    const match = ultimo ? /^[A-Z]-(\d{5})$/.exec(ultimo.numero_asiento) : null;
+    const siguiente = (match ? parseInt(match[1], 10) + 1 : 1).toString().padStart(5, '0');
+    return `${prefijo}-${siguiente}`;
+};
+
 export const getAsientos = async (req, res) => {
-    let { desde = 0, limite = 10, id_empresa, estado, fecha_desde, fecha_hasta } = req.query;
+    let { desde = 0, limite = 10, id_empresa, estado, fecha_desde, fecha_hasta, tipo_asiento } = req.query;
 
     if (!id_empresa) {
         return res.status(400).json({ msg: 'id_empresa es obligatorio' });
@@ -121,6 +172,9 @@ export const getAsientos = async (req, res) => {
 
         const where = { id_empresa };
         if (estado) where.estado = estado;
+        if (tipo_asiento && ['MANUAL', 'COMPRA', 'VENTA', 'AJUSTE', 'CIERRE'].includes(tipo_asiento.toUpperCase())) {
+            where.tipo_asiento = tipo_asiento.toUpperCase();
+        }
         if (fecha_desde && fecha_hasta) {
             where.fecha = { [Op.between]: [fecha_desde, fecha_hasta] };
         }
@@ -237,17 +291,10 @@ export const crearAsiento = async (req, res) => {
             });
         }
 
-        // D.3: verificar duplicado de numero_asiento DENTRO de la misma
-        // transacción. El UNIQUE de BD (uq_asiento_empresa_numero) sigue
-        // siendo la protección final; esto es solo para un mensaje amigable.
-        const existe = await AsientoCabecera.findOne({
-            where: { id_empresa: cabecera.id_empresa, numero_asiento: cabecera.numero_asiento },
-            transaction
-        });
-        if (existe) {
-            await transaction.rollback();
-            return res.status(409).json({ msg: `Ya existe un asiento con el número ${cabecera.numero_asiento} para esta empresa` });
-        }
+        // El número de asiento se genera acá, no se toma del body -por más
+        // que el frontend calcule y muestre un número tentativo para que
+        // el alumno vea algo antes de guardar, la palabra final es del
+        // backend, calculada dentro de esta misma transacción.
 
         // Si el asiento viene de "cargar desde compra/venta", validar que
         // esa compra/venta exista, esté activa, sea de esta empresa, no esté
@@ -296,15 +343,34 @@ export const crearAsiento = async (req, res) => {
             return res.status(errorDetalles.status).json({ msg: errorDetalles.msg });
         }
 
-        // Crear cabecera
-        const nuevoCabecera = await AsientoCabecera.create({
-            ...cabecera,
-            id_compraventa: compraVenta ? compraVenta.id_compraventa : null,
-            total_debe: totalDebe,
-            total_haber: totalHaber,
-            diferencia: totalDebe - totalHaber,
-            estado: 'pendiente'
-        }, { transaction });
+        // Crear cabecera (con reintento acotado: si el número generado
+        // choca con uno que se insertó justo en el medio -caso extremo del
+        // "primer asiento de este tipo" sin fila que bloquear, ver arriba-
+        // se recalcula contra el estado real y se reintenta, en vez de
+        // fallarle al usuario por una carrera de milisegundos).
+        let nuevoCabecera;
+        let intentosNumero = 0;
+        while (true) {
+            intentosNumero++;
+            const numero_asiento = await generarSiguienteNumeroAsiento(cabecera.id_empresa, cabecera.tipo_asiento, transaction);
+            try {
+                nuevoCabecera = await AsientoCabecera.create({
+                    ...cabecera,
+                    numero_asiento,
+                    id_compraventa: compraVenta ? compraVenta.id_compraventa : null,
+                    total_debe: totalDebe,
+                    total_haber: totalHaber,
+                    diferencia: totalDebe - totalHaber,
+                    estado: 'pendiente'
+                }, { transaction });
+                break;
+            } catch (errorCreate) {
+                const campos = errorCreate.fields ? Object.keys(errorCreate.fields) : [];
+                const esChoqueDeNumero = errorCreate.name === 'SequelizeUniqueConstraintError' && campos.includes('numero_asiento');
+                if (esChoqueDeNumero && intentosNumero < 3) continue;
+                throw errorCreate;
+            }
+        }
 
         // Salvaguarda: si por cualquier motivo el asiento quedó creado sin
         // el id_compraventa correcto, abortamos antes de marcar la

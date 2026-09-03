@@ -17,6 +17,15 @@
             @actualizartabla="obtenerVentas"
           />
 
+          <ImputarCompraVentaModal
+            v-if="ventaAImputar"
+            :id-compra-venta="ventaAImputar.id_venta"
+            tipo="VENTA"
+            :numero-factura="ventaAImputar.numero_factura"
+            @cerrar="ventaAImputar = null"
+            @imputado="onImputado"
+          />
+
           <div class="flex items-center justify-between border-b border-gray-200 pb-3 mb-4">
             <h2 class="text-2xl font-semibold text-gray-900">Registrar Venta</h2>
           </div>
@@ -75,8 +84,7 @@
                     <th class="text-left px-3 py-2 whitespace-nowrap">Cuenta grav. 5%</th>
                     <th class="text-left px-3 py-2 whitespace-nowrap">Concepto</th>
                     <th class="text-left px-3 py-2 whitespace-nowrap">Imputada</th>
-                    <th class="text-center px-3 py-2">Modificar</th>
-                    <th class="text-center px-3 py-2">Anular</th>
+                    <th class="text-center px-3 py-2">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -100,16 +108,31 @@
                     <td class="px-3 py-2 whitespace-nowrap">{{ item.nombre_cuenta_grav10 }}</td>
                     <td class="px-3 py-2 whitespace-nowrap">{{ item.nombre_cuenta_grav05 }}</td>
                     <td class="px-3 py-2 whitespace-nowrap">{{ item.concepto }}</td>
-                    <td class="px-3 py-2 whitespace-nowrap">{{ item.imputada }}</td>
-                    <td class="px-3 py-2 text-center">
-                      <button type="button" class="text-blue-600 hover:text-blue-800" @click="editarVenta(item)">
-                        <i class="ti ti-pencil text-lg"></i>
-                      </button>
+                    <td class="px-3 py-2 whitespace-nowrap">
+                      <span
+                        class="px-2 py-0.5 rounded-full text-xs font-medium"
+                        :class="item.imputada === 'SI' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'"
+                      >
+                        {{ item.imputada === 'SI' ? 'Imputada' : 'Borrador' }}
+                      </span>
                     </td>
-                    <td class="px-3 py-2 text-center">
-                      <button type="button" class="text-red-600 hover:text-red-800" @click="anularVenta(item)">
-                        <i class="ti ti-ban text-lg"></i>
-                      </button>
+                    <td class="px-3 py-2">
+                      <div class="flex items-center justify-center gap-2">
+                        <template v-if="item.imputada === 'NO'">
+                          <button type="button" class="text-blue-600 hover:text-blue-800" title="Modificar" @click="editarVenta(item)">
+                            <i class="ti ti-pencil text-lg"></i>
+                          </button>
+                          <button type="button" class="text-amber-600 hover:text-amber-800" title="Imputar (genera el asiento)" @click="abrirImputar(item)">
+                            <i class="ti ti-check text-lg"></i>
+                          </button>
+                          <button type="button" class="text-red-600 hover:text-red-800" title="Eliminar borrador" @click="eliminarBorrador(item)">
+                            <i class="ti ti-trash text-lg"></i>
+                          </button>
+                        </template>
+                        <button v-else type="button" class="text-red-600 hover:text-red-800" title="Anular (reversa el asiento)" @click="anularImputada(item)">
+                          <i class="ti ti-ban text-lg"></i>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                   <tr v-if="itemsPaginados.length === 0">
@@ -143,9 +166,11 @@ import { useEspejoApp } from '@/composables/useEspejoapp'
 import Navbar from '@/components/NavbarComponent.vue'
 import Siderbar from '@/components/SiderbarComponent.vue'
 import CompraVentaModal from '@/components/CompraVentaModal.vue'
+import ImputarCompraVentaModal from '@/components/ImputadaCompraVentaModal.vue'
 import {
   obtenerComprasVentas,
-  anularCompraVenta
+  anularCompraVenta,
+  desactivarCompraVenta
 } from '@/services/compraVentaService'
 import { abrirReportePdf } from '@/services/reportesService'
 const { makeToast, makeConfirm } = useAlertas()
@@ -155,7 +180,7 @@ const seleccion = useSeleccionStore()
 interface Cuenta { nombre: string }
 
 interface VentaApi {
-  idcompra_venta: number
+  id_compraventa: number
   tipo_de_factura: string
   numero_factura: string
   numero_timbrado: number
@@ -213,7 +238,7 @@ const obtenerVentas = async () => {
     const { data } = await obtenerComprasVentas('VENTA', seleccion.idEmpresa)
     ventasApi.value = data.registros ?? []
     items.value = ventasApi.value.map((v) => ({
-      id_venta: v.idcompra_venta,
+      id_venta: v.id_compraventa,
       nombre_sucursal: v.Sucursal?.nombre ?? '',
       fecha: v.fecha,
       numero_identificacion: v.ClienteProveedor?.numero_identificacion ?? '',
@@ -305,7 +330,7 @@ const abrirModal = () => {
 }
 
 const editarVenta = (item: VentaListado) => {
-  const original = ventasApi.value.find((v) => v.idcompra_venta === item.id_venta)
+  const original = ventasApi.value.find((v) => v.id_compraventa === item.id_venta)
   if (!original) {
     makeToast('No se encontró la venta original.', 'error')
     return
@@ -320,18 +345,44 @@ const cerrarModal = () => {
   mostrarModal.value = false
 }
 
-// ---------- Anular ----------
-const anularVenta = (item: VentaListado) => {
-  makeConfirm('¿Está seguro?', 'Esta acción anulará la venta.').then(async (result) => {
+// ---------- Eliminar borrador (imputada='NO') ----------
+const eliminarBorrador = (item: VentaListado) => {
+  makeConfirm('¿Está seguro?', 'Esta acción eliminará el borrador de la venta.').then(async (result) => {
+    if (!result.isConfirmed) return
+    try {
+      await desactivarCompraVenta(item.id_venta)
+      makeToast('Se eliminó correctamente.', 'success')
+      obtenerVentas()
+    } catch (error) {
+      manejarError(error, 'No se pudo eliminar la venta.')
+    }
+  })
+}
+
+// ---------- Anular (reversa una venta ya imputada, junto con su asiento) ----------
+const anularImputada = (item: VentaListado) => {
+  makeConfirm('¿Está seguro?', 'Esta acción anulará la venta y el asiento contable que generó.').then(async (result) => {
     if (!result.isConfirmed) return
     try {
       await anularCompraVenta(item.id_venta)
-      makeToast('Se anuló correctamente.', 'success')
+      makeToast('Se anuló correctamente, junto con su asiento.', 'success')
       obtenerVentas()
     } catch (error) {
       manejarError(error, 'No se pudo anular la venta.')
     }
   })
+}
+
+// ---------- Imputar (genera el asiento y bloquea la venta) ----------
+const ventaAImputar = ref<VentaListado | null>(null)
+
+const abrirImputar = (item: VentaListado) => {
+  ventaAImputar.value = item
+}
+
+const onImputado = () => {
+  ventaAImputar.value = null
+  obtenerVentas()
 }
 
 // ---------- Reporte PDF ----------

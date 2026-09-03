@@ -23,9 +23,12 @@ export interface AsientoPayload {
 export const crearAsiento = (datos: AsientoPayload) =>
   api.post('/api/asientos', datos)
 
-// Trae el último asiento registrado para calcular el próximo número (A-00001, A-00002...)
-export const obtenerUltimoAsiento = (idEmpresa: number) =>
-  api.get('/api/asientos', { params: { id_empresa: idEmpresa, limite: 1, desde: 0 } })
+// Trae el último asiento de un tipo puntual, para calcular el próximo
+// número con el prefijo correcto (M-00001, C-00001, V-00001, A-00001...).
+// Sin tipoAsiento, trae el último de cualquier tipo (uso general, no para
+// numeración).
+export const obtenerUltimoAsiento = (idEmpresa: number, tipoAsiento?: string) =>
+  api.get('/api/asientos', { params: { id_empresa: idEmpresa, tipo_asiento: tipoAsiento, limite: 1, desde: 0 } })
 
 // ---------- Listado, detalle y anulación ----------
 

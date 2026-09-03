@@ -47,7 +47,7 @@
               <table class="w-full text-sm">
                 <thead class="bg-slate-700 text-white">
                   <tr>
-                    <th class="text-left px-3 py-2">Ítem</th>
+                    <th class="text-left px-3 py-2">Id</th>
                     <th class="text-left px-3 py-2">Sala</th>
                     <th class="text-left px-3 py-2">Contraseña</th>
                     <th class="text-left px-3 py-2">Cantidad alumnos</th>
@@ -92,7 +92,7 @@
               <table class="w-full text-sm">
                 <thead class="bg-slate-700 text-white">
                   <tr>
-                    <th class="text-left px-3 py-2">Ítem</th>
+                    <th class="text-left px-3 py-2">Id</th>
                     <th class="text-left px-3 py-2">Alumno</th>
                     <th class="text-left px-3 py-2">Cédula</th>
                     <th class="text-left px-3 py-2">Estado</th>

@@ -106,6 +106,37 @@
             </div>
           </div>
 
+          <!-- Factura de origen: solo aparece si este asiento se generó
+               automático al imputar una compra/venta. Es de solo lectura
+               a propósito -cada compra/venta imputada ya tiene su único
+               asiento, no se puede "asociar" otro a mano. -->
+          <div
+            v-if="asientoSeleccionado?.compraVenta"
+            class="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mt-6 text-sm"
+          >
+            <p class="text-xs font-semibold text-amber-700 mb-2">
+              Generado automáticamente desde una {{ asientoSeleccionado.compraVenta.tipo === 'COMPRA' ? 'compra' : 'venta' }}
+            </p>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div>
+                <p class="text-xs text-gray-500 mb-0.5">N° factura</p>
+                <p class="font-medium text-gray-900">{{ asientoSeleccionado.compraVenta.numero_factura }}</p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-500 mb-0.5">Fecha</p>
+                <p class="font-medium text-gray-900">{{ asientoSeleccionado.compraVenta.fecha }}</p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-500 mb-0.5">{{ asientoSeleccionado.compraVenta.tipo === 'COMPRA' ? 'Proveedor' : 'Cliente' }}</p>
+                <p class="font-medium text-gray-900">{{ asientoSeleccionado.compraVenta.ClienteProveedor?.razon_social ?? '—' }}</p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-500 mb-0.5">Total factura</p>
+                <p class="font-medium text-gray-900">{{ asientoSeleccionado.compraVenta.total_factura }} ({{ asientoSeleccionado.compraVenta.condicion }})</p>
+              </div>
+            </div>
+          </div>
+
           <!-- Tabla de detalle -->
           <div v-if="asientoSeleccionado" class="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200 mt-6">
             <h3 class="text-sm font-semibold text-gray-700 px-4 py-3 border-b border-gray-100">
@@ -167,6 +198,16 @@ interface Sucursal { nombre: string }
 
 // tipo_asiento es el ENUM de texto de la tabla ('MANUAL'|'COMPRA'|'VENTA'|'AJUSTE'),
 // no un id numérico a otra tabla — coincide con el cambio que hicimos en ModalAsiento.
+interface FacturaOrigen {
+  id_compraventa: number
+  tipo: 'COMPRA' | 'VENTA'
+  numero_factura: string
+  fecha: string
+  total_factura: number
+  condicion: string
+  ClienteProveedor?: { razon_social: string; numero_identificacion: string }
+}
+
 interface Asiento {
   id_asiento: number
   numero_asiento: string
@@ -179,6 +220,10 @@ interface Asiento {
   empresa?: Empresa
   sucursal?: Sucursal
   concepto: string
+  // Solo viene poblado si este asiento se generó automáticamente al
+  // imputar una compra/venta (no se puede "asociar" a mano: es de solo
+  // lectura, ver nota en el include del backend).
+  compraVenta?: FacturaOrigen
 }
 
 // El campo real de la cuenta es id_empresacuenta (confirmado por la respuesta

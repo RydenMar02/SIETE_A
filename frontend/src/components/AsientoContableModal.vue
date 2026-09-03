@@ -38,7 +38,7 @@
 
           <div>
             <label class="block text-sm font-medium mb-1.5">N° asiento</label>
-            <input :value="numeroAsiento" readonly type="text" class="w-full bg-slate-600 text-slate-300 rounded-lg px-3 py-2 cursor-not-allowed" />
+            <input :value="numeroAsiento" readonly placeholder="Elegí un tipo primero" type="text" class="w-full bg-slate-600 text-slate-300 rounded-lg px-3 py-2 cursor-not-allowed" />
           </div>
 
           <div>
@@ -168,10 +168,10 @@
 
         <!-- Pie del modal -->
         <div class="flex justify-end gap-2 border-t border-slate-500 pt-4">
-          <button type="button" class="bg-amber-500 hover:bg-amber-600 text-white font-medium px-4 py-2 rounded-lg transition" @click="tipoAsiento = 'Compra'">
+          <button type="button" class="bg-amber-500 hover:bg-amber-600 text-white font-medium px-4 py-2 rounded-lg transition" @click="tipoAsiento = 'COMPRA'">
             Compra
           </button>
-          <button type="button" class="bg-amber-500 hover:bg-amber-600 text-white font-medium px-4 py-2 rounded-lg transition" @click="tipoAsiento = 'Venta'">
+          <button type="button" class="bg-amber-500 hover:bg-amber-600 text-white font-medium px-4 py-2 rounded-lg transition" @click="tipoAsiento = 'VENTA'">
             Venta
           </button>
           <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2 rounded-lg transition">
@@ -187,7 +187,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useAlertas } from '@/composables/useAlertas'
 import { useSeleccionStore } from '@/stores/useSeleccionStore'
 import { useEspejoApp } from '@/composables/useEspejoapp'
@@ -223,6 +223,13 @@ const cargarSucursales = async () => {
 }
 
 // ---------- Cabecera ----------
+const PREFIJOS_TIPO_ASIENTO: Record<string, string> = {
+  MANUAL: 'M',
+  COMPRA: 'C',
+  VENTA: 'V',
+  AJUSTE: 'A'
+}
+
 const tipoAsiento = ref('')
 const concepto = ref('')
 const numeroAsiento = ref('')
@@ -239,19 +246,31 @@ const cargarFecha = () => {
 }
 
 const cargarNumeroAsiento = async () => {
+  const prefijo = PREFIJOS_TIPO_ASIENTO[tipoAsiento.value]
+  if (!prefijo) {
+    // Sin tipo elegido todavía no hay prefijo que buscar.
+    numeroAsiento.value = ''
+    return
+  }
+
   try {
-    const { data } = await obtenerUltimoAsiento(seleccion.idEmpresa)
-    const ultimo = data?.asientos?.[0]?.numero_asiento ?? 'A-00000'
-    const match = /^([A-Z])-(\d{5})$/.exec(ultimo)
-    const prefijo = match ? match[1] : 'A'
-    const numero = (parseInt(match ? match[2] : '0', 10) + 1).toString().padStart(5, '0')
-    numeroAsiento.value = `${prefijo}-${numero}`
+    const { data } = await obtenerUltimoAsiento(seleccion.idEmpresa, tipoAsiento.value)
+    const ultimo: string | undefined = data?.asientos?.[0]?.numero_asiento
+    const match = ultimo ? /^[A-Z]-(\d{5})$/.exec(ultimo) : null
+    const siguiente = (match ? parseInt(match[1], 10) + 1 : 1).toString().padStart(5, '0')
+    numeroAsiento.value = `${prefijo}-${siguiente}`
   } catch (error) {
     console.error('Error al obtener número de asiento:', error)
     makeToast('Error al obtener el número de asiento.', 'error')
-    numeroAsiento.value = 'A-00001'
+    numeroAsiento.value = `${prefijo}-00001`
   }
 }
+
+// Cada tipo tiene su propia numeración (M-00001, C-00001, V-00001, A-00001,
+// cada una arrancando de 1 y avanzando independiente de las demás) — antes
+// esto se calculaba UNA sola vez al abrir el modal, a partir del último
+// asiento de CUALQUIER tipo, sin importar lo que se eligiera acá abajo.
+watch(tipoAsiento, cargarNumeroAsiento)
 
 const validarConcepto = (valor: string): string => {
   const texto = valor.trim()

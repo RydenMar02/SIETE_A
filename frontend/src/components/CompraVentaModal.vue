@@ -209,13 +209,44 @@
           </div>
         </div>
 
+        <!-- ¿Imputada? -->
+        <div class="bg-slate-800 border border-slate-600 rounded-lg px-4 py-3 flex flex-col gap-2">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <p class="font-medium">¿Imputada?</p>
+              <p class="text-xs text-slate-400">Si la marcás como imputada, el asiento contable se genera solo al guardar.</p>
+            </div>
+            <div class="flex gap-2">
+              <button
+                type="button"
+                class="px-4 py-1.5 rounded-lg text-sm font-medium transition"
+                :class="!marcarImputada ? 'bg-white text-gray-900' : 'bg-slate-600 text-slate-300'"
+                @click="marcarImputada = false"
+              >
+                No
+              </button>
+              <button
+                type="button"
+                class="px-4 py-1.5 rounded-lg text-sm font-medium transition"
+                :class="marcarImputada ? 'bg-green-600 text-white' : 'bg-slate-600 text-slate-300'"
+                @click="marcarImputada = true"
+              >
+                Sí
+              </button>
+            </div>
+          </div>
+          <p v-if="marcarImputada" class="text-amber-300 text-xs">
+            ⚠ Una vez guardada, ya no se va a poder modificar ni eliminar — revisá bien los datos antes de confirmar.
+          </p>
+        </div>
+
         <!-- Pie del modal -->
         <div class="flex justify-end gap-2 border-t border-slate-500 pt-4">
           <button type="button" class="bg-red-600 hover:bg-red-700 text-white font-medium px-4 py-2 rounded-lg transition" @click="pedirCerrar">
             Cancelar
           </button>
           <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2 rounded-lg transition">
-            Registrar
+            {{ marcarImputada ? 'Registrar e imputar' : 'Registrar' }}
           </button>
         </div>
       </form>
@@ -241,7 +272,7 @@ import ModalCuenta from '@/components/CuentaEmpresaModal.vue'
 import { obtenerSucursales, type Sucursal } from '@/services/sucursalService'
 import { obtenerClientesProveedores, type ClienteProveedorItem } from '@/services/clienteProveedorService'
 import { obtenerCuentas, validarCuentaPorCodigo, type Cuenta } from '@/services/cuentaService'
-import { crearCompraVenta, modificarCompraVenta, type CompraVentaPayload, type TipoComprobante } from '@/services/compraVentaService'
+import { crearCompraVenta, modificarCompraVenta, imputarCompraVenta, type CompraVentaPayload, type TipoComprobante } from '@/services/compraVentaService'
 
 // ---------- Props ----------
 // El único diferenciador real entre "modal de compra" y "modal de venta"
@@ -302,7 +333,6 @@ const form = reactive({
   gravada05: '',
   moneda: '',
   concepto: '',
-  imputada: '',
   cuenta_exenta: '',
   cuenta_grav10: '',
   cuenta_grav05: '',
@@ -316,6 +346,7 @@ const form = reactive({
 })
 
 const idEditar = ref<number | null>(null)
+const marcarImputada = ref(false)
 
 // ---------- Cuentas: nombres resueltos y modal de ayuda ----------
 const nombreCuentaExenta = ref('')
@@ -410,8 +441,7 @@ watch(
 const ENUMS = {
   tipoFactura: ['FACTURA', 'FACTURA ELECTRONICA'],
   condicion: ['CONTADO', 'CREDITO'],
-  moneda: ['LOCAL', 'EXTRANJERA'],
-  imputada: ['SI', 'NO']
+  moneda: ['LOCAL', 'EXTRANJERA']
 }
 
 const validarFormulario = (): { ok: boolean; errores: string[]; advertencias: string[] } => {
@@ -489,7 +519,6 @@ const registrar = async () => {
     tipo_de_factura: toUpperSafe(form.tipo_de_factura),
     condicion: toUpperSafe(form.condicion),
     moneda: toUpperSafe(form.moneda),
-    imputada: toUpperSafe(form.imputada) || 'NO',
     fecha: form.fecha,
     fecha_vencimiento: form.fecha_vencimiento,
     total_factura: toNumberSafe(form.total_factura) ?? 0,
@@ -512,13 +541,48 @@ const registrar = async () => {
   const etiqueta = props.tipo === 'COMPRA' ? 'compra' : 'venta'
 
   try {
+    // Guardamos primero (crear o modificar) y recién después, si se
+    // marcó "Sí", imputamos -son dos llamadas al backend, pero desde
+    // acá se ven como un solo paso. Reusa el mismo endpoint de
+    // imputar que ya usa el botón de la tabla: una sola lógica
+    // contable, nunca duplicada entre los dos flujos.
+    let idParaImputar: number | null = idEditar.value
+
     if (idEditar.value) {
       await modificarCompraVenta(idEditar.value, payload)
-      makeToast(`La ${etiqueta} fue actualizada exitosamente.`, 'success')
     } else {
-      await crearCompraVenta(payload)
-      makeToast(`La ${etiqueta} fue guardada exitosamente.`, 'success')
+      const { data } = await crearCompraVenta(payload)
+      idParaImputar = data?.registro?.id_compraventa ?? null
     }
+
+    if (!marcarImputada.value) {
+      makeToast(`La ${etiqueta} fue ${idEditar.value ? 'actualizada' : 'guardada'} exitosamente.`, 'success')
+      emit('actualizartabla')
+      emit('cerrar')
+      return
+    }
+
+    if (!idParaImputar) {
+      makeToast(`La ${etiqueta} se guardó como borrador, pero no se pudo determinar su ID para imputarla. Imputala desde la tabla.`, 'warning')
+      emit('actualizartabla')
+      emit('cerrar')
+      return
+    }
+
+    try {
+      await imputarCompraVenta(idParaImputar)
+      makeToast(`La ${etiqueta} fue guardada e imputada: el asiento ya se generó.`, 'success')
+    } catch (errorImputar) {
+      // El borrador SÍ quedó guardado -no perdimos el trabajo, solo no
+      // se pudo generar el asiento todavía (ej. falta una cuenta).
+      // Se puede reintentar desde el botón "Imputar" de la tabla.
+      const data = (errorImputar as { response?: { data?: { msg?: string } } })?.response?.data
+      makeToast(
+        `La ${etiqueta} se guardó, pero no se pudo imputar todavía: ${data?.msg ?? 'error desconocido'}. Podés reintentarlo desde la tabla.`,
+        'warning'
+      )
+    }
+
     emit('actualizartabla')
     emit('cerrar')
   } catch (error) {
@@ -536,7 +600,7 @@ const manejarError = (error: unknown, mensajePorDefecto: string) => {
 const cargarDatosDeEdicion = () => {
   if (!props.itemEditar) return
 
-  idEditar.value = props.itemEditar.idcompra_venta ?? null
+  idEditar.value = props.itemEditar.id_compraventa ?? null
   Object.assign(form, { ...props.itemEditar })
 
   if (props.itemEditar.cuentaExenta) {
