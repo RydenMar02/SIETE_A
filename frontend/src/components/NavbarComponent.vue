@@ -111,6 +111,13 @@
 
   </header>
 
+  <!-- Indicador de que el profesor está espectando en vivo, visible en
+       cualquier pantalla mientras dure — nada de esto queda activo sin que
+       el alumno lo note. -->
+  <div v-if="tiempoReal.siendoEspectado" class="bg-red-600 text-white text-xs font-medium text-center py-1 px-2">
+    🔴 El profesor está viendo lo que estás cargando
+  </div>
+
   <!-- Panel de notificaciones: se abre con el botón "Notificaciones", de
        escritorio o mobile. Se cierra tocando afuera. Cada mensaje es
        clickeable y abre el chat correspondiente (drawer para el alumno,

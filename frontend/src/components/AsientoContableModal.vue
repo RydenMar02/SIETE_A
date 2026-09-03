@@ -187,9 +187,10 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useAlertas } from '@/composables/useAlertas'
 import { useSeleccionStore } from '@/stores/useSeleccionStore'
+import { useTiempoRealStore } from '@/stores/useTiempoRealStore'
 import { formatearImporte, parsearImporte, toNumberSafe } from '@/composables/useFacturaCalculo'
 import ModalCuentaEmpresa from '@/components/CuentaEmpresaModal.vue'
 import { obtenerSucursales, type Sucursal } from '@/services/sucursalService'
@@ -205,6 +206,7 @@ const emit = defineEmits<{
 
 const { makeToast, makeConfirm } = useAlertas()
 const seleccion = useSeleccionStore()
+const tiempoReal = useTiempoRealStore()
 
 
 // ---------- Sucursales ----------
@@ -361,6 +363,41 @@ const eliminarRenglon = (item: Renglon) => {
 const totalDebe = computed(() => renglones.value.reduce((acc, r) => acc + r.debe, 0))
 const totalHaber = computed(() => renglones.value.reduce((acc, r) => acc + r.haber, 0))
 const diferencia = computed(() => totalDebe.value - totalHaber.value)
+
+// ---------- Espectar: mirroring del formulario para el profesor ----------
+// No es video de pantalla: emitimos el estado del formulario (mismos
+// valores que ve el alumno) para que el panel "Espectar" de Seguimiento en
+// aula lo pinte en modo lectura. tiempoReal.emitirEstadoApp() ya se ocupa
+// de no mandar nada si ningún profesor está espectando en este momento.
+const nombreSucursalSeleccionada = computed(
+  () => sucursales.value.find((s) => s.id_sucursal === idSucursalSeleccionada.value)?.nombre ?? null
+)
+
+const snapshotFormulario = computed(() => ({
+  sucursal: nombreSucursalSeleccionada.value,
+  tipoAsiento: tipoAsiento.value,
+  numeroAsiento: numeroAsiento.value,
+  concepto: concepto.value,
+  renglonEnCarga: { codigo: codigo.value, cuenta: nombreCuenta.value, debe: debe.value, haber: haber.value },
+  renglones: renglones.value.map((r) => ({ codigo: r.codigo, nombre: r.nombre, debe: r.debe, haber: r.haber })),
+  totalDebe: totalDebe.value,
+  totalHaber: totalHaber.value,
+  diferencia: diferencia.value
+}))
+
+let temporizadorEstado: ReturnType<typeof setTimeout> | null = null
+watch(snapshotFormulario, (estado) => {
+  if (temporizadorEstado) clearTimeout(temporizadorEstado)
+  // Throttle de 400ms: alcanza para verse "en vivo" sin mandar un evento
+  // por cada tecla que tipea el alumno.
+  temporizadorEstado = setTimeout(() => {
+    tiempoReal.emitirEstadoApp(seleccion.idSala, '/asiento', estado)
+  }, 400)
+}, { deep: true, immediate: true })
+
+onBeforeUnmount(() => {
+  if (temporizadorEstado) clearTimeout(temporizadorEstado)
+})
 
 // ---------- Cerrar modal ----------
 const pedirCerrar = () => {

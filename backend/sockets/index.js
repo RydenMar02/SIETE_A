@@ -1,12 +1,17 @@
 import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import Mensaje from '../models/mensaje.js';
-import { puedeAccederASala } from '../middlewares/pertenencia.middleware.js';
+import { puedeAccederASala, esProfesorDeSala } from '../middlewares/pertenencia.middleware.js';
 import {
     registrarConexion,
     registrarDesconexion,
     registrarActividad,
-    listarPresenciaDeSala
+    listarPresenciaDeSala,
+    iniciarEspectacion,
+    detenerEspectacion,
+    detenerTodaEspectacionDeSocket,
+    registrarEstadoApp,
+    obtenerEstadoApp
 } from './estadoPresencia.js';
 
 /**
@@ -75,6 +80,62 @@ export const initSockets = (httpServer) => {
             }
         });
 
+        // ---------------------------------------------------------------
+        // Espectar: el profesor pide ver en vivo el formulario que está
+        // llenando un alumno puntual (sin captura de pantalla, sin WebRTC:
+        // el alumno emite su propio estado de app y acá solo lo reenviamos
+        // a quien esté espectándolo).
+        // ---------------------------------------------------------------
+
+        socket.on('espectar-alumno', async ({ id_sala, id_alumno }) => {
+            if (!id_sala || !id_alumno) return;
+
+            const esProfesor = await esProfesorDeSala({ usuario }, id_sala).catch(() => false);
+            if (!esProfesor) return;
+
+            socket.join(`sala:${id_sala}:espectando:${id_alumno}`);
+            const esElPrimero = iniciarEspectacion(id_sala, id_alumno, socket.id);
+
+            // Si ya había un estado cacheado (el alumno venía siendo
+            // espectado por otro profesor, o quedó de hace un momento), se
+            // lo mandamos ya mismo, sin esperar al próximo cambio del alumno.
+            const estadoPrevio = obtenerEstadoApp(id_sala, id_alumno);
+            if (estadoPrevio) {
+                socket.emit('estado-app-actualizado', { id_alumno, ...estadoPrevio });
+            }
+
+            // Solo hace falta avisarle al alumno que empiece a emitir si es
+            // el primer profesor mirándolo — si ya había otro, el alumno ya
+            // está emitiendo.
+            if (esElPrimero) {
+                io.to(`usuario:${id_alumno}`).emit('te-estan-espectando', { id_sala });
+            }
+        });
+
+        socket.on('dejar-de-espectar', ({ id_sala, id_alumno }) => {
+            if (!id_sala || !id_alumno) return;
+
+            socket.leave(`sala:${id_sala}:espectando:${id_alumno}`);
+            const quedoSinEspectadores = detenerEspectacion(id_sala, id_alumno, socket.id);
+            if (quedoSinEspectadores) {
+                io.to(`usuario:${id_alumno}`).emit('dejaron-de-espectarte', { id_sala });
+            }
+        });
+
+        // Lo emite el alumno (con throttle del lado del cliente) mientras
+        // algún profesor lo está espectando. No hace falta validar permiso
+        // de sala de nuevo acá: si no perteneciera a la sala nunca pudo
+        // unirse con 'unirse-sala', y sin esa room esto no llega a nadie.
+        socket.on('estado-app-actualizado', ({ id_sala, ruta, formulario }) => {
+            if (!id_sala || !socket.data.salasUnidas.has(id_sala)) return;
+
+            const estado = registrarEstadoApp(id_sala, usuario.id_usuario, ruta, formulario);
+            io.to(`sala:${id_sala}:espectando:${usuario.id_usuario}`).emit('estado-app-actualizado', {
+                id_alumno: usuario.id_usuario,
+                ...estado
+            });
+        });
+
         socket.on('enviar-mensaje', async ({ id_sala, id_receptor, contenido }) => {
             if (!id_sala || !id_receptor || !contenido?.trim()) return;
 
@@ -128,6 +189,15 @@ export const initSockets = (httpServer) => {
                 if (quedoSinConexion) {
                     io.to(`sala:${id_sala}`).emit('presencia-actualizada', listarPresenciaDeSala(id_sala));
                 }
+            }
+
+            // Si este socket era un profesor espectando a algún alumno (ej.
+            // cerró la pestaña sin apretar "Cerrar" en el panel), avisarle a
+            // esos alumnos que ya nadie los está mirando, si no queda ningún
+            // otro espectador para ese mismo alumno.
+            const quedaronSinEspectador = detenerTodaEspectacionDeSocket(socket.id);
+            for (const { id_sala, id_alumno } of quedaronSinEspectador) {
+                io.to(`usuario:${id_alumno}`).emit('dejaron-de-espectarte', { id_sala });
             }
         });
     });
