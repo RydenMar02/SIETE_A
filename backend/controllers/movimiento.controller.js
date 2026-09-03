@@ -10,7 +10,10 @@ import { esProfesorDeSala } from '../middlewares/pertenencia.middleware.js';
  * Ni un alumno, ni el profesor de otra sala, pueden verlo.
  */
 export const getMovimientosPorSala = async (req, res) => {
-    const { id_sala, desde = 0, limite = 50 } = req.query;
+    const { id_sala, desde = 0 } = req.query;
+    // Tope máximo de 200 filas por página, sin importar qué pida el
+    // cliente -evita que alguien pida miles de registros de una sola vez.
+    const limite = Math.min(parseInt(req.query.limite) || 50, 200);
 
     if (!id_sala) {
         return res.status(400).json({ msg: 'id_sala es obligatorio' });

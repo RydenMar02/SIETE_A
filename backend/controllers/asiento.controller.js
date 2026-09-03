@@ -8,6 +8,7 @@ import EmpresaCuenta from '../models/empresaCuenta.js';
 import CompraVenta from '../models/compraVenta.js';
 import { puedeAccederAEmpresa } from '../middlewares/pertenencia.middleware.js';
 import { registrarMovimiento } from '../helpers/registrarMovimiento.js';
+import { validarEjercicioAbiertoParaEscritura } from '../helpers/ejercicioHelper.js';
 
 const includeCompleto = [
     { model: Empresa, as: 'empresa', attributes: ['nombre'] },
@@ -226,6 +227,16 @@ export const crearAsiento = async (req, res) => {
             return res.status(403).json({ msg: 'La sucursal indicada no pertenece a la empresa indicada' });
         }
 
+        // Bloqueo post-cierre: no se puede contabilizar nada con fecha
+        // dentro de un ejercicio ya cerrado de la sala de esta empresa.
+        const ejercicioCerrado = await validarEjercicioAbiertoParaEscritura(cabecera.id_empresa, cabecera.fecha, transaction);
+        if (ejercicioCerrado) {
+            await transaction.rollback();
+            return res.status(400).json({
+                msg: `La fecha indicada pertenece al ejercicio "${ejercicioCerrado.nombre}", que ya está cerrado. No se pueden registrar asientos en ese período.`
+            });
+        }
+
         // D.3: verificar duplicado de numero_asiento DENTRO de la misma
         // transacción. El UNIQUE de BD (uq_asiento_empresa_numero) sigue
         // siendo la protección final; esto es solo para un mensaje amigable.
@@ -369,6 +380,28 @@ export const actualizarAsiento = async (req, res) => {
             });
         }
 
+        // Bloqueo post-cierre, en dos sentidos:
+        // A) la fecha ORIGINAL del asiento ya pertenece a un ejercicio
+        //    cerrado -no importa qué se quiera cambiar, ya no se toca.
+        // B) si el body trae una fecha NUEVA, tampoco puede "mover" el
+        //    asiento hacia adentro de un ejercicio cerrado.
+        const ejercicioCerradoOriginal = await validarEjercicioAbiertoParaEscritura(asiento.id_empresa, asiento.fecha, transaction);
+        if (ejercicioCerradoOriginal) {
+            await transaction.rollback();
+            return res.status(400).json({
+                msg: `Este asiento pertenece al ejercicio "${ejercicioCerradoOriginal.nombre}", que ya está cerrado. No se puede modificar.`
+            });
+        }
+        if (req.body.fecha !== undefined && req.body.fecha !== asiento.fecha) {
+            const ejercicioCerradoNuevo = await validarEjercicioAbiertoParaEscritura(asiento.id_empresa, req.body.fecha, transaction);
+            if (ejercicioCerradoNuevo) {
+                await transaction.rollback();
+                return res.status(400).json({
+                    msg: `No se puede mover el asiento a una fecha del ejercicio "${ejercicioCerradoNuevo.nombre}", que ya está cerrado.`
+                });
+            }
+        }
+
         // Lista blanca explícita: NUNCA se hace asiento.update(req.body).
         // id_empresa, id_sucursal, id_compraventa, estado, numero_asiento y
         // tipo_asiento quedan siempre fuera de lo editable por PUT -esos
@@ -456,6 +489,17 @@ export const eliminarAsiento = async (req, res) => {
             });
         }
 
+        // El ejercicio cerrado prevalece incluso sobre un pendiente sin
+        // id_compraventa: si su fecha cae dentro de un ejercicio ya
+        // cerrado, no se borra, sin excepción.
+        const ejercicioCerrado = await validarEjercicioAbiertoParaEscritura(asiento.id_empresa, asiento.fecha, transaction);
+        if (ejercicioCerrado) {
+            await transaction.rollback();
+            return res.status(400).json({
+                msg: `Este asiento pertenece al ejercicio "${ejercicioCerrado.nombre}", que ya está cerrado. No se puede eliminar.`
+            });
+        }
+
         const { id_asiento, numero_asiento, id_empresa } = asiento;
 
         // Sin ON DELETE CASCADE a nivel de BD: los detalles se borran
@@ -508,6 +552,18 @@ export const procesarAsiento = async (req, res) => {
         if (Math.abs(parseFloat(asiento.diferencia)) > 0.01) {
             await transaction.rollback();
             return res.status(400).json({ msg: 'No se puede procesar un asiento no balanceado' });
+        }
+
+        // Defensa histórica: en un cierre nuevo esto no debería poder pasar
+        // (el cierre exige 0 pendientes en el rango antes de cerrar), pero
+        // si existiera un pendiente histórico de un ejercicio que quedó
+        // cerrado por alguna inconsistencia previa, no debe poder procesarse.
+        const ejercicioCerrado = await validarEjercicioAbiertoParaEscritura(asiento.id_empresa, asiento.fecha, transaction);
+        if (ejercicioCerrado) {
+            await transaction.rollback();
+            return res.status(400).json({
+                msg: `Este asiento pertenece al ejercicio "${ejercicioCerrado.nombre}", que ya está cerrado. No se puede procesar.`
+            });
         }
 
         await asiento.update({ estado: 'procesado' }, { transaction });
