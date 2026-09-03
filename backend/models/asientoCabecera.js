@@ -2,6 +2,7 @@ import { DataTypes } from 'sequelize';
 import db from '../db/conexion.js';
 import Empresa from './empresa.js';
 import Sucursal from './sucursal.js';
+import CompraVenta from './compraVenta.js';
 
 const AsientoCabecera = db.define('AsientoCabecera', {
     id_asiento: {
@@ -16,6 +17,10 @@ const AsientoCabecera = db.define('AsientoCabecera', {
     id_sucursal: {
         type: DataTypes.INTEGER,
         allowNull: false
+    },
+    id_compraventa: {
+        type: DataTypes.INTEGER,
+        allowNull: true
     },
     tipo_asiento: {
         type: DataTypes.ENUM('MANUAL', 'COMPRA', 'VENTA', 'AJUSTE'),
@@ -64,10 +69,16 @@ const AsientoCabecera = db.define('AsientoCabecera', {
         unique: true,
         fields: ['id_empresa', 'numero_asiento'],
         name: 'uq_asiento_empresa_numero'
+    }, {
+        unique: true,
+        fields: ['id_compraventa'],
+        name: 'uq_asiento_compraventa'
     }]
 });
 
 AsientoCabecera.belongsTo(Empresa, { foreignKey: 'id_empresa', as: 'empresa' });
 AsientoCabecera.belongsTo(Sucursal, { foreignKey: 'id_sucursal', as: 'sucursal' });
+AsientoCabecera.belongsTo(CompraVenta, { foreignKey: 'id_compraventa', as: 'compraVenta' });
+CompraVenta.hasOne(AsientoCabecera, { foreignKey: 'id_compraventa', as: 'asientoCabecera' });
 
 export default AsientoCabecera;

@@ -1,12 +1,12 @@
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { readFileSync } from 'fs';
-import puppeteer from 'puppeteer';
 import { create } from 'express-handlebars';
 import db from '../db/conexion.js';
 import Empresa from '../models/empresa.js';
 import { puedeAccederAEmpresa } from '../middlewares/pertenencia.middleware.js';
 import { registrarMovimiento } from '../helpers/registrarMovimiento.js';
+import { validarFiltroFechas, construirFiltroFechaSQL, generarYEnviarPdf } from '../helpers/reportesHelper.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const hbs = create();
@@ -19,6 +19,8 @@ const SQL_LIBRO_DIARIO = `
     JOIN asiento_cabecera ac ON ad.id_asiento = ac.id_asiento
     JOIN empresa_cuenta ec ON ad.id_empresacuenta = ec.id_empresacuenta
     WHERE ac.id_empresa = :id_empresa
+      AND ac.estado != 'anulado'
+      /*FILTRO_FECHA*/
     ORDER BY ac.fecha, ac.numero_asiento, ec.codigo
 `;
 
@@ -29,8 +31,15 @@ export const getLibroDiario = async (req, res) => {
         if (!(await puedeAccederAEmpresa(req, parseInt(id_empresa)))) {
             return res.status(403).json({ msg: 'No tenés permiso para ver el libro diario de esta empresa' });
         }
-        const [resultados] = await db.query(SQL_LIBRO_DIARIO, { replacements: { id_empresa: parseInt(id_empresa) } });
-        res.json({ total: resultados.length, registros: resultados });
+
+        const { error, fecha_desde, fecha_hasta } = validarFiltroFechas(req.query);
+        if (error) return res.status(error.status).json({ msg: error.msg });
+
+        const { fragmento, replacements } = construirFiltroFechaSQL(fecha_desde, fecha_hasta);
+        const sql = SQL_LIBRO_DIARIO.replace('/*FILTRO_FECHA*/', fragmento);
+
+        const [resultados] = await db.query(sql, { replacements: { id_empresa: parseInt(id_empresa), ...replacements } });
+        res.json({ total: resultados.length, filtro: { fecha_desde, fecha_hasta }, registros: resultados });
     } catch (error) {
         console.error(error);
         res.status(500).json({ msg: 'Error al obtener libro diario' });
@@ -45,7 +54,13 @@ export const reporteLibroDiarioPDF = async (req, res) => {
             return res.status(403).json({ msg: 'No tenés permiso para ver el libro diario de esta empresa' });
         }
 
-        const [resultados] = await db.query(SQL_LIBRO_DIARIO, { replacements: { id_empresa: parseInt(id_empresa) } });
+        const { error, fecha_desde, fecha_hasta } = validarFiltroFechas(req.query);
+        if (error) return res.status(error.status).json({ msg: error.msg });
+
+        const { fragmento, replacements } = construirFiltroFechaSQL(fecha_desde, fecha_hasta);
+        const sql = SQL_LIBRO_DIARIO.replace('/*FILTRO_FECHA*/', fragmento);
+
+        const [resultados] = await db.query(sql, { replacements: { id_empresa: parseInt(id_empresa), ...replacements } });
         if (!resultados.length) return res.status(404).json({ msg: 'No hay registros para generar el libro diario' });
 
         const empresa = await Empresa.findByPk(id_empresa, { attributes: ['nombre'] });
@@ -76,15 +91,6 @@ export const reporteLibroDiarioPDF = async (req, res) => {
             fecha_generacion: new Date().toLocaleString('es-PY')
         });
 
-        const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
-        const page = await browser.newPage();
-        await page.setContent(html, { waitUntil: 'networkidle0' });
-        const outputPath = join(__dirname, '../reports/reporte_libro_diario.pdf');
-        await page.pdf({ path: outputPath, format: 'A4', printBackground: true, margin: { top: '20mm', bottom: '20mm', left: '15mm', right: '15mm' } });
-        await browser.close();
-
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', 'inline; filename=reporte_libro_diario.pdf');
         await registrarMovimiento({
             id_usuario: req.usuario.id_usuario,
             id_empresa: parseInt(id_empresa),
@@ -92,7 +98,7 @@ export const reporteLibroDiarioPDF = async (req, res) => {
             descripcion: 'Generó el PDF del libro diario'
         });
 
-        res.sendFile(outputPath);
+        await generarYEnviarPdf(res, html, 'reporte_libro_diario');
     } catch (error) {
         console.error(error);
         res.status(500).json({ msg: 'Error al generar PDF del libro diario' });

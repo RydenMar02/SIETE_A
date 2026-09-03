@@ -1,9 +1,4 @@
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import { existsSync, readFileSync } from 'fs';
-import puppeteer from 'puppeteer';
-import Handlebars from 'express-handlebars';
-import { create } from 'express-handlebars';
+import { Op } from 'sequelize';
 import AsientoCabecera from '../models/asientoCabecera.js';
 import AsientoDetalle from '../models/asientoDetalle.js';
 import Empresa from '../models/empresa.js';
@@ -11,11 +6,29 @@ import Sucursal from '../models/sucursal.js';
 import EmpresaCuenta from '../models/empresaCuenta.js';
 import { puedeAccederAEmpresa } from '../middlewares/pertenencia.middleware.js';
 import { registrarMovimiento } from '../helpers/registrarMovimiento.js';
+import { validarFiltroFechas, generarYEnviarPdf } from '../helpers/reportesHelper.js';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import { readFileSync } from 'fs';
+import { create } from 'express-handlebars';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const hbs = create();
 
 hbs.handlebars.registerHelper('eq', (a, b) => a === b);
+
+/** Arma el where de Sequelize con id_empresa + estado activo + rango de fecha opcional */
+const construirWhereAsientos = (id_empresa, fecha_desde, fecha_hasta) => {
+    const where = { id_empresa, estado: { [Op.ne]: 'anulado' } };
+    if (fecha_desde && fecha_hasta) {
+        where.fecha = { [Op.between]: [fecha_desde, fecha_hasta] };
+    } else if (fecha_desde) {
+        where.fecha = { [Op.gte]: fecha_desde };
+    } else if (fecha_hasta) {
+        where.fecha = { [Op.lte]: fecha_hasta };
+    }
+    return where;
+};
 
 export const getAsientosPorEmpresa = async (req, res) => {
     const { id_empresa } = req.query;
@@ -27,8 +40,11 @@ export const getAsientosPorEmpresa = async (req, res) => {
             return res.status(403).json({ msg: 'No tenés permiso para ver los asientos de esta empresa' });
         }
 
+        const { error, fecha_desde, fecha_hasta } = validarFiltroFechas(req.query);
+        if (error) return res.status(error.status).json({ msg: error.msg });
+
         const asientos = await AsientoCabecera.findAll({
-            where: { id_empresa: parseInt(id_empresa) },
+            where: construirWhereAsientos(parseInt(id_empresa), fecha_desde, fecha_hasta),
             include: [
                 { model: Empresa, as: 'empresa', attributes: ['nombre'] },
                 { model: Sucursal, as: 'sucursal', attributes: ['nombre'] },
@@ -41,7 +57,7 @@ export const getAsientosPorEmpresa = async (req, res) => {
             order: [['fecha', 'DESC'], ['numero_asiento', 'ASC']]
         });
 
-        res.json({ total: asientos.length, asientos });
+        res.json({ total: asientos.length, filtro: { fecha_desde, fecha_hasta }, asientos });
     } catch (error) {
         console.error(error);
         res.status(500).json({ msg: 'Error al obtener asientos' });
@@ -58,10 +74,13 @@ export const reporteAsientosPDF = async (req, res) => {
             return res.status(403).json({ msg: 'No tenés permiso para ver los asientos de esta empresa' });
         }
 
+        const { error, fecha_desde, fecha_hasta } = validarFiltroFechas(req.query);
+        if (error) return res.status(error.status).json({ msg: error.msg });
+
         const empresa = await Empresa.findByPk(id_empresa, { attributes: ['nombre'] });
 
         const asientos = await AsientoCabecera.findAll({
-            where: { id_empresa: parseInt(id_empresa) },
+            where: construirWhereAsientos(parseInt(id_empresa), fecha_desde, fecha_hasta),
             include: [
                 { model: Empresa, as: 'empresa', attributes: ['nombre'] },
                 { model: Sucursal, as: 'sucursal', attributes: ['nombre'] },
@@ -125,16 +144,6 @@ export const reporteAsientosPDF = async (req, res) => {
             fecha_generacion: new Date().toLocaleString('es-PY')
         });
 
-        const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
-        const page = await browser.newPage();
-        await page.setContent(html, { waitUntil: 'networkidle0' });
-
-        const outputPath = join(__dirname, '../reports/reporte_asientos.pdf');
-        await page.pdf({ path: outputPath, format: 'A4', printBackground: true, margin: { top: '20mm', bottom: '20mm', left: '15mm', right: '15mm' } });
-        await browser.close();
-
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', 'inline; filename=reporte_asientos.pdf');
         await registrarMovimiento({
             id_usuario: req.usuario.id_usuario,
             id_empresa: parseInt(id_empresa),
@@ -142,7 +151,7 @@ export const reporteAsientosPDF = async (req, res) => {
             descripcion: 'Generó el PDF del reporte de asientos'
         });
 
-        res.sendFile(outputPath);
+        await generarYEnviarPdf(res, html, 'reporte_asientos');
     } catch (error) {
         console.error(error);
         res.status(500).json({ msg: 'Error al generar reporte de asientos' });
