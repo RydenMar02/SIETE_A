@@ -1,6 +1,9 @@
 import db from '../db/conexion.js';
 import Empresa from '../models/empresa.js';
+import Ejercicio from '../models/ejercicio.js';
+import SalaUsuario from '../models/salaUsuario.js';
 import { puedeAccederAEmpresa } from '../middlewares/pertenencia.middleware.js';
+import { validarFiltroFechas, construirFiltroFechaSQL } from '../helpers/reportesHelper.js';
 
 // Códigos raíz (nivel 1) del plan de cuentas que corresponden al Balance
 // General (Activo, Pasivo, Patrimonio). Todo lo demás (4 en adelante:
@@ -14,6 +17,9 @@ const CODIGOS_BALANCE_GENERAL = ['1', '2', '3'];
  * (id_padre en empresa_cuenta apunta a id_cuenta, que se repite una vez
  * por empresa, así que hay que filtrar por id_empresa en cada salto para
  * no cruzar el árbol de una empresa con el de otra).
+ * Acepta opcionalmente { fecha_desde, fecha_hasta } para acotar los
+ * asientos considerados; sin filtro, se conserva el comportamiento
+ * histórico (toda la actividad de la empresa).
  */
 const SQL_SALDOS_POR_RAIZ = `
     WITH RECURSIVE ancestro AS (
@@ -41,6 +47,8 @@ const SQL_SALDOS_POR_RAIZ = `
     JOIN asiento_cabecera ac ON ad.id_asiento = ac.id_asiento
     JOIN ancestro raiz ON raiz.id_origen = ec.id_empresacuenta AND raiz.nivel = 1
     WHERE ac.id_empresa = :id_empresa
+      AND ac.estado != 'anulado'
+      /*FILTRO_FECHA*/
     GROUP BY ec.id_empresacuenta, ec.codigo, ec.nombre, raiz.codigo, raiz.nombre, raiz.naturaleza
     ORDER BY raiz.codigo, ec.codigo
 `;
@@ -77,9 +85,16 @@ const agruparPorRaiz = (filas) => {
     return Array.from(grupos.values()).sort((a, b) => parseInt(a.codigo_raiz) - parseInt(b.codigo_raiz));
 };
 
-/** Trae las filas planas (una por cuenta con movimiento), ya con su raíz resuelta */
-export const obtenerSaldosConRaiz = async (id_empresa) => {
-    const [filas] = await db.query(SQL_SALDOS_POR_RAIZ, { replacements: { id_empresa } });
+/**
+ * Trae las filas planas (una por cuenta con movimiento), ya con su raíz
+ * resuelta. filtroFecha es opcional -{fecha_desde, fecha_hasta}-; sin él,
+ * se conserva el comportamiento histórico (se llama así, sin segundo
+ * argumento, desde ejercicio.controller.js para el cierre de ejercicio).
+ */
+export const obtenerSaldosConRaiz = async (id_empresa, filtroFecha = {}) => {
+    const { fragmento, replacements } = construirFiltroFechaSQL(filtroFecha.fecha_desde, filtroFecha.fecha_hasta);
+    const sql = SQL_SALDOS_POR_RAIZ.replace('/*FILTRO_FECHA*/', fragmento);
+    const [filas] = await db.query(sql, { replacements: { id_empresa, ...replacements } });
     return filas;
 };
 
@@ -89,9 +104,10 @@ export const obtenerSaldosConRaiz = async (id_empresa) => {
  * ejercicio (positivo = ganancia, negativo = pérdida).
  * Se exporta como función reusable porque el Balance General también
  * necesita este número para poder cerrar (activo = pasivo + patrimonio).
+ * filtroFecha es opcional, mismo comportamiento que obtenerSaldosConRaiz.
  */
-export const calcularEstadoResultados = async (id_empresa) => {
-    const filas = await obtenerSaldosConRaiz(id_empresa);
+export const calcularEstadoResultados = async (id_empresa, filtroFecha = {}) => {
+    const filas = await obtenerSaldosConRaiz(id_empresa, filtroFecha);
     const gruposTodos = agruparPorRaiz(filas);
     const grupos = gruposTodos.filter(g => !CODIGOS_BALANCE_GENERAL.includes(g.codigo_raiz));
 
@@ -104,8 +120,33 @@ export const calcularEstadoResultados = async (id_empresa) => {
     return { grupos, resultado_neto };
 };
 
+/**
+ * Resuelve un id_ejercicio a su rango de fechas (fecha_inicio/fecha_fin,
+ * ya existentes en el modelo Ejercicio -no hace falta derivarlas de
+ * Periodo), validando que el ejercicio exista y pertenezca a la misma
+ * sala que la empresa consultada. Devuelve { error } o { fecha_desde,
+ * fecha_hasta }.
+ */
+const resolverRangoPorEjercicio = async (id_ejercicio, id_empresa) => {
+    const ejercicio = await Ejercicio.findByPk(id_ejercicio);
+    if (!ejercicio) {
+        return { error: { status: 404, msg: 'El ejercicio indicado no existe' } };
+    }
+
+    const empresa = await Empresa.findByPk(id_empresa, { include: [SalaUsuario] });
+    if (!empresa || !empresa.SalaUsuario) {
+        return { error: { status: 400, msg: 'No se pudo determinar la sala de la empresa' } };
+    }
+
+    if (ejercicio.id_sala !== empresa.SalaUsuario.id_sala) {
+        return { error: { status: 403, msg: 'El ejercicio indicado no pertenece a la sala de esta empresa' } };
+    }
+
+    return { fecha_desde: ejercicio.fecha_inicio, fecha_hasta: ejercicio.fecha_fin, ejercicio };
+};
+
 export const getEstadoResultados = async (req, res) => {
-    const { id_empresa } = req.query;
+    const { id_empresa, id_ejercicio, fecha_desde, fecha_hasta } = req.query;
 
     if (!id_empresa) {
         return res.status(400).json({ msg: 'id_empresa es obligatorio' });
@@ -122,10 +163,35 @@ export const getEstadoResultados = async (req, res) => {
             return res.status(404).json({ msg: 'Empresa no encontrada' });
         }
 
-        const { grupos, resultado_neto } = await calcularEstadoResultados(idEmpresaNum);
+        // Precedencia de filtros: id_ejercicio define el rango base. Si
+        // además vienen fechas explícitas, se rechaza -no se mezclan
+        // criterios ambiguos.
+        let filtroFecha;
+        if (id_ejercicio && (fecha_desde || fecha_hasta)) {
+            return res.status(400).json({
+                msg: 'No se puede combinar id_ejercicio con fecha_desde/fecha_hasta. Usá uno u otro.'
+            });
+        }
+
+        if (id_ejercicio) {
+            const { error, fecha_desde: fd, fecha_hasta: fh } = await resolverRangoPorEjercicio(id_ejercicio, idEmpresaNum);
+            if (error) {
+                return res.status(error.status).json({ msg: error.msg });
+            }
+            filtroFecha = { fecha_desde: fd, fecha_hasta: fh };
+        } else {
+            const { error, fecha_desde: fd, fecha_hasta: fh } = validarFiltroFechas(req.query);
+            if (error) {
+                return res.status(error.status).json({ msg: error.msg });
+            }
+            filtroFecha = { fecha_desde: fd, fecha_hasta: fh };
+        }
+
+        const { grupos, resultado_neto } = await calcularEstadoResultados(idEmpresaNum, filtroFecha);
 
         res.json({
             empresa: empresa.nombre,
+            filtro: filtroFecha,
             grupos,
             resultado_neto,
             resultado_tipo: resultado_neto >= 0 ? 'GANANCIA' : 'PÉRDIDA'
@@ -154,7 +220,17 @@ export const getBalanceGeneral = async (req, res) => {
             return res.status(404).json({ msg: 'Empresa no encontrada' });
         }
 
-        const [filas] = await db.query(SQL_SALDOS_POR_RAIZ, { replacements: { id_empresa: idEmpresaNum } });
+        // Para Balance General normalmente se usa fecha_hasta como fecha de
+        // corte; si además viene fecha_desde se respeta como rango por
+        // consistencia técnica, pero contablemente lo esperable es solo
+        // fecha_hasta (el balance es acumulativo desde el origen).
+        const { error, fecha_desde, fecha_hasta } = validarFiltroFechas(req.query);
+        if (error) {
+            return res.status(error.status).json({ msg: error.msg });
+        }
+        const filtroFecha = { fecha_desde, fecha_hasta };
+
+        const filas = await obtenerSaldosConRaiz(idEmpresaNum, filtroFecha);
         const gruposTodos = agruparPorRaiz(filas);
         const grupos = gruposTodos.filter(g => CODIGOS_BALANCE_GENERAL.includes(g.codigo_raiz));
 
@@ -164,12 +240,15 @@ export const getBalanceGeneral = async (req, res) => {
 
         // El resultado del ejercicio (todavía no cerrado) se suma al
         // patrimonio para que el balance efectivamente cierre: Activo =
-        // Pasivo + Patrimonio + Resultado del ejercicio.
-        const { resultado_neto } = await calcularEstadoResultados(idEmpresaNum);
+        // Pasivo + Patrimonio + Resultado del ejercicio. Usa el MISMO
+        // filtro de fecha que el resto del balance, para que ambos números
+        // representen el mismo corte temporal.
+        const { resultado_neto } = await calcularEstadoResultados(idEmpresaNum, filtroFecha);
         const patrimonioTotal = patrimonioBase + resultado_neto;
 
         res.json({
             empresa: empresa.nombre,
+            filtro: filtroFecha,
             grupos,
             resultado_ejercicio_no_cerrado: resultado_neto,
             totales: {

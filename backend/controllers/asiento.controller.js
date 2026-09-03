@@ -23,6 +23,88 @@ const includeCompleto = [
     }
 ];
 
+/**
+ * Valida una línea de detalle individual: montos no negativos, no debe+haber
+ * simultáneos, no ambos en cero, y que la cuenta exista, pertenezca a esta
+ * empresa, sea asentable y esté activa. Devuelve null si está OK, o
+ * { status, msg } si hay que rechazar. Reutilizada por crearAsiento y
+ * actualizarAsiento para no duplicar la lógica.
+ */
+const validarLineaDetalle = async (detalle, id_empresa, transaction) => {
+    const debe = parseFloat(detalle.debe || 0);
+    const haber = parseFloat(detalle.haber || 0);
+
+    if (debe < 0 || haber < 0) {
+        return { status: 400, msg: 'Los montos de debe/haber no pueden ser negativos' };
+    }
+    if (debe > 0 && haber > 0) {
+        return { status: 400, msg: 'Una línea no puede tener importe en debe y en haber a la vez' };
+    }
+    if (debe === 0 && haber === 0) {
+        return { status: 400, msg: 'Una línea no puede tener debe y haber en cero' };
+    }
+
+    const cuenta = await EmpresaCuenta.findByPk(detalle.id_empresacuenta, { transaction });
+    if (!cuenta) {
+        return { status: 400, msg: `No existe la cuenta con id ${detalle.id_empresacuenta}` };
+    }
+    if (cuenta.id_empresa !== id_empresa) {
+        return { status: 403, msg: `La cuenta "${cuenta.nombre}" no pertenece a esta empresa` };
+    }
+    if (cuenta.asentable?.toUpperCase() !== 'SI') {
+        return { status: 400, msg: `La cuenta "${cuenta.nombre}" no es asentable` };
+    }
+    if (cuenta.estado !== 1) {
+        return { status: 400, msg: `La cuenta "${cuenta.nombre}" está inactiva` };
+    }
+
+    return null;
+};
+
+/**
+ * Valida el array completo de detalles: mínimo 1 línea, cada línea vía
+ * validarLineaDetalle, y que el total debe = total haber. Devuelve
+ * { error } si algo falla, o { totalDebe, totalHaber } si todo está OK.
+ */
+const validarDetalles = async (asientoDetalles, id_empresa, transaction) => {
+    if (!Array.isArray(asientoDetalles) || asientoDetalles.length === 0) {
+        return { error: { status: 400, msg: 'El asiento debe tener al menos una línea de detalle' } };
+    }
+
+    for (const detalle of asientoDetalles) {
+        const errorLinea = await validarLineaDetalle(detalle, id_empresa, transaction);
+        if (errorLinea) {
+            return { error: errorLinea };
+        }
+    }
+
+    const totalDebe = asientoDetalles.reduce((acc, d) => acc + parseFloat(d.debe || 0), 0);
+    const totalHaber = asientoDetalles.reduce((acc, d) => acc + parseFloat(d.haber || 0), 0);
+
+    if (Math.abs(totalDebe - totalHaber) > 0.01) {
+        return { error: { status: 400, msg: 'El asiento no está balanceado. Debe = Haber' } };
+    }
+
+    return { totalDebe, totalHaber };
+};
+
+/**
+ * Distingue cuál UNIQUE de asiento_cabecera se violó inspeccionando
+ * error.fields (las columnas reales del índice, expuestas por Sequelize) en
+ * vez de depender de un texto de mensaje frágil, y responde 409 con un
+ * mensaje específico según el índice real afectado.
+ */
+const responderConflictoUnique = (error, res) => {
+    const campos = error.fields ? Object.keys(error.fields) : [];
+    if (campos.includes('id_compraventa')) {
+        return res.status(409).json({ msg: 'Esta compra/venta ya tiene un asiento asociado.' });
+    }
+    if (campos.includes('numero_asiento')) {
+        return res.status(409).json({ msg: 'Ya existe un asiento con ese número para esta empresa.' });
+    }
+    return res.status(409).json({ msg: 'El registro entra en conflicto con datos existentes.' });
+};
+
 export const getAsientos = async (req, res) => {
     let { desde = 0, limite = 10, id_empresa, estado, fecha_desde, fecha_hasta } = req.query;
 
@@ -132,17 +214,34 @@ export const crearAsiento = async (req, res) => {
     try {
         const { asientoDetalles, id_compraventa, ...cabecera } = req.body;
 
-        // Verificar duplicado
+        // C.4: la sucursal debe existir y pertenecer realmente a la empresa
+        // indicada -antes solo se confiaba en ambos IDs recibidos del body.
+        const sucursal = await Sucursal.findByPk(cabecera.id_sucursal, { transaction });
+        if (!sucursal) {
+            await transaction.rollback();
+            return res.status(400).json({ msg: 'La sucursal indicada no existe' });
+        }
+        if (sucursal.id_empresa !== cabecera.id_empresa) {
+            await transaction.rollback();
+            return res.status(403).json({ msg: 'La sucursal indicada no pertenece a la empresa indicada' });
+        }
+
+        // D.3: verificar duplicado de numero_asiento DENTRO de la misma
+        // transacción. El UNIQUE de BD (uq_asiento_empresa_numero) sigue
+        // siendo la protección final; esto es solo para un mensaje amigable.
         const existe = await AsientoCabecera.findOne({
-            where: { id_empresa: cabecera.id_empresa, numero_asiento: cabecera.numero_asiento }
+            where: { id_empresa: cabecera.id_empresa, numero_asiento: cabecera.numero_asiento },
+            transaction
         });
         if (existe) {
             await transaction.rollback();
-            return res.status(400).json({ msg: `Ya existe un asiento con el número ${cabecera.numero_asiento}` });
+            return res.status(409).json({ msg: `Ya existe un asiento con el número ${cabecera.numero_asiento} para esta empresa` });
         }
 
         // Si el asiento viene de "cargar desde compra/venta", validar que
-        // esa compra/venta exista, sea de esta empresa y no esté imputada ya
+        // esa compra/venta exista, esté activa, sea de esta empresa, no esté
+        // imputada ya, y que todavía no tenga otro asiento vinculado -esta
+        // corrección ya fue probada en producción y se conserva intacta.
         let compraVenta = null;
         if (id_compraventa) {
             compraVenta = await CompraVenta.findByPk(id_compraventa, {
@@ -153,6 +252,10 @@ export const crearAsiento = async (req, res) => {
                 await transaction.rollback();
                 return res.status(400).json({ msg: 'La compra/venta indicada no existe' });
             }
+            if (compraVenta.estado !== 1) {
+                await transaction.rollback();
+                return res.status(400).json({ msg: 'La compra/venta indicada está desactivada' });
+            }
             if (compraVenta.Sucursal.id_empresa !== cabecera.id_empresa) {
                 await transaction.rollback();
                 return res.status(400).json({ msg: 'La compra/venta indicada no pertenece a esta empresa' });
@@ -161,39 +264,50 @@ export const crearAsiento = async (req, res) => {
                 await transaction.rollback();
                 return res.status(400).json({ msg: 'Esa compra/venta ya fue imputada en otro asiento' });
             }
-        }
-
-        // Validar cuentas asentables
-        for (const detalle of asientoDetalles) {
-            const cuenta = await EmpresaCuenta.findByPk(detalle.id_empresacuenta);
-            if (!cuenta) {
+            const asientoYaVinculado = await AsientoCabecera.findOne({
+                where: { id_compraventa: compraVenta.id_compraventa },
+                transaction
+            });
+            if (asientoYaVinculado) {
                 await transaction.rollback();
-                return res.status(400).json({ msg: `No existe la cuenta con id ${detalle.id_empresacuenta}` });
-            }
-            if (cuenta.asentable.toUpperCase() !== 'SI') {
-                await transaction.rollback();
-                return res.status(400).json({ msg: `La cuenta "${cuenta.nombre}" no es asentable` });
+                return res.status(409).json({ msg: 'Esa compra/venta ya tiene un asiento generado' });
             }
         }
 
-        // Calcular totales
-        const totalDebe = asientoDetalles.reduce((acc, d) => acc + parseFloat(d.debe || 0), 0);
-        const totalHaber = asientoDetalles.reduce((acc, d) => acc + parseFloat(d.haber || 0), 0);
-
-        // Validar balance
-        if (Math.abs(totalDebe - totalHaber) > 0.01) {
+        // C.3 + C.5 + D.4 + D.5: validación completa de líneas (montos,
+        // debe/haber exclusivos, no vacías, cuenta de la misma empresa,
+        // asentable, activa) + balance total.
+        const { error: errorDetalles, totalDebe, totalHaber } = await validarDetalles(
+            asientoDetalles, cabecera.id_empresa, transaction
+        );
+        if (errorDetalles) {
             await transaction.rollback();
-            return res.status(400).json({ msg: 'El asiento no está balanceado. Debe = Haber' });
+            return res.status(errorDetalles.status).json({ msg: errorDetalles.msg });
         }
 
         // Crear cabecera
         const nuevoCabecera = await AsientoCabecera.create({
             ...cabecera,
+            id_compraventa: compraVenta ? compraVenta.id_compraventa : null,
             total_debe: totalDebe,
             total_haber: totalHaber,
             diferencia: totalDebe - totalHaber,
             estado: 'pendiente'
         }, { transaction });
+
+        // Salvaguarda: si por cualquier motivo el asiento quedó creado sin
+        // el id_compraventa correcto, abortamos antes de marcar la
+        // compra/venta como imputada -nunca debe quedar imputada='SI' sin
+        // un asiento realmente vinculado por FK.
+        if (compraVenta && Number(nuevoCabecera.id_compraventa) !== Number(compraVenta.id_compraventa)) {
+            await transaction.rollback();
+            console.error(
+                `[crearAsiento] id_compraventa no coincide tras crear el asiento: esperado ${compraVenta.id_compraventa}, obtenido ${nuevoCabecera.id_compraventa}`
+            );
+            return res.status(500).json({
+                msg: 'Error interno: el asiento generado no quedó vinculado correctamente a la compra/venta. No se aplicó ningún cambio.'
+            });
+        }
 
         // Crear detalles
         await AsientoDetalle.bulkCreate(
@@ -225,6 +339,9 @@ export const crearAsiento = async (req, res) => {
     } catch (error) {
         await transaction.rollback();
         console.error(error);
+        if (error.name === 'SequelizeUniqueConstraintError') {
+            return responderConflictoUnique(error, res);
+        }
         res.status(500).json({ msg: 'Error al crear asiento' });
     }
 };
@@ -234,53 +351,59 @@ export const actualizarAsiento = async (req, res) => {
     const { id } = req.params;
 
     try {
-        const { asientoDetalles, ...cabecera } = req.body;
-
-        const asiento = await AsientoCabecera.findByPk(id);
+        const asiento = await AsientoCabecera.findByPk(id, { transaction });
         if (!asiento) {
             await transaction.rollback();
             return res.status(404).json({ msg: 'Asiento no encontrado' });
         }
 
-        if (asiento.estado === 'procesado') {
+        // C.1: solo un asiento 'pendiente' puede modificarse. 'procesado' y
+        // 'anulado' quedan bloqueados por igual -antes solo se rechazaba
+        // 'procesado', dejando 'anulado' editable por error.
+        if (asiento.estado !== 'pendiente') {
             await transaction.rollback();
-            return res.status(400).json({ msg: 'No se puede modificar un asiento procesado' });
+            return res.status(400).json({
+                msg: asiento.estado === 'procesado'
+                    ? 'No se puede modificar un asiento procesado'
+                    : 'No se puede modificar un asiento anulado'
+            });
         }
 
-        if (asientoDetalles && asientoDetalles.length > 0) {
-            // Validar cuentas
-            for (const detalle of asientoDetalles) {
-                const cuenta = await EmpresaCuenta.findByPk(detalle.id_empresacuenta);
-                if (!cuenta) {
-                    await transaction.rollback();
-                    return res.status(400).json({ msg: `No existe la cuenta con id ${detalle.id_empresacuenta}` });
-                }
-                if (cuenta.asentable.toUpperCase() !== 'SI') {
-                    await transaction.rollback();
-                    return res.status(400).json({ msg: `La cuenta "${cuenta.nombre}" no es asentable` });
-                }
-            }
+        // Lista blanca explícita: NUNCA se hace asiento.update(req.body).
+        // id_empresa, id_sucursal, id_compraventa, estado, numero_asiento y
+        // tipo_asiento quedan siempre fuera de lo editable por PUT -esos
+        // campos estructurales solo cambian mediante las acciones de
+        // negocio correspondientes (crear, procesar, o la anulación desde
+        // Compra/Venta).
+        const datosEditables = {};
+        if (req.body.fecha !== undefined) datosEditables.fecha = req.body.fecha;
+        if (req.body.documento !== undefined) datosEditables.documento = req.body.documento;
+        if (req.body.concepto !== undefined) datosEditables.concepto = req.body.concepto;
 
-            const totalDebe = asientoDetalles.reduce((acc, d) => acc + parseFloat(d.debe || 0), 0);
-            const totalHaber = asientoDetalles.reduce((acc, d) => acc + parseFloat(d.haber || 0), 0);
-
-            if (Math.abs(totalDebe - totalHaber) > 0.01) {
+        // Si no viene asientoDetalles en el body, se conservan los actuales.
+        // Si viene como [], se rechaza explícitamente (no se ignora en
+        // silencio): un asiento siempre debe tener al menos una línea.
+        if (req.body.asientoDetalles !== undefined) {
+            const { error: errorDetalles, totalDebe, totalHaber } = await validarDetalles(
+                req.body.asientoDetalles, asiento.id_empresa, transaction
+            );
+            if (errorDetalles) {
                 await transaction.rollback();
-                return res.status(400).json({ msg: 'El asiento no está balanceado. Debe = Haber' });
+                return res.status(errorDetalles.status).json({ msg: errorDetalles.msg });
             }
 
             await AsientoDetalle.destroy({ where: { id_asiento: id }, transaction });
             await AsientoDetalle.bulkCreate(
-                asientoDetalles.map(d => ({ ...d, id_asiento: id })),
+                req.body.asientoDetalles.map(d => ({ ...d, id_asiento: id })),
                 { transaction }
             );
 
-            cabecera.total_debe = totalDebe;
-            cabecera.total_haber = totalHaber;
-            cabecera.diferencia = totalDebe - totalHaber;
+            datosEditables.total_debe = totalDebe;
+            datosEditables.total_haber = totalHaber;
+            datosEditables.diferencia = totalDebe - totalHaber;
         }
 
-        await asiento.update(cabecera, { transaction });
+        await asiento.update(datosEditables, { transaction });
 
         await registrarMovimiento({
             id_usuario: req.usuario.id_usuario,
@@ -307,27 +430,49 @@ export const eliminarAsiento = async (req, res) => {
     const { id } = req.params;
 
     try {
-        const asiento = await AsientoCabecera.findByPk(id);
+        const asiento = await AsientoCabecera.findByPk(id, { transaction });
         if (!asiento) {
             await transaction.rollback();
             return res.status(404).json({ msg: 'Asiento no encontrado' });
         }
 
-        if (asiento.estado === 'procesado') {
+        // C.2: un asiento vinculado a una CompraVenta nunca se borra desde
+        // el módulo genérico, sin importar su estado -la única vía correcta
+        // para corregirlo es la anulación desde Compra/Venta, que mantiene
+        // la FK y el historial intactos.
+        if (asiento.id_compraventa !== null) {
             await transaction.rollback();
-            return res.status(400).json({ msg: 'No se puede eliminar un asiento procesado' });
+            return res.status(400).json({
+                msg: 'Este asiento está asociado a una compra/venta. Para corregirlo, usá el flujo de anulación de Compra/Venta (POST /api/compras-ventas/:id/anular), no el borrado directo de Asientos.'
+            });
         }
+
+        if (asiento.estado !== 'pendiente') {
+            await transaction.rollback();
+            return res.status(400).json({
+                msg: asiento.estado === 'procesado'
+                    ? 'No se puede eliminar un asiento procesado'
+                    : 'No se puede eliminar un asiento anulado'
+            });
+        }
+
+        const { id_asiento, numero_asiento, id_empresa } = asiento;
+
+        // Sin ON DELETE CASCADE a nivel de BD: los detalles se borran
+        // explícitamente, dentro de la misma transacción, antes de borrar
+        // la cabecera.
+        await AsientoDetalle.destroy({ where: { id_asiento }, transaction });
+        await asiento.destroy({ transaction });
 
         await registrarMovimiento({
             id_usuario: req.usuario.id_usuario,
-            id_empresa: asiento.id_empresa,
+            id_empresa,
             tipo: 'ELIMINO_ASIENTO',
-            descripcion: `Eliminó el asiento ${asiento.numero_asiento}`,
-            referencia_id: asiento.id_asiento,
+            descripcion: `Eliminó el asiento ${numero_asiento}`,
+            referencia_id: id_asiento,
             transaction
         });
 
-        await asiento.destroy({ transaction });
         await transaction.commit();
         res.json({ msg: 'Asiento eliminado' });
     } catch (error) {
@@ -339,31 +484,48 @@ export const eliminarAsiento = async (req, res) => {
 
 export const procesarAsiento = async (req, res) => {
     const { id } = req.params;
+    const transaction = await db.transaction();
 
     try {
-        const asiento = await AsientoCabecera.findByPk(id);
+        const asiento = await AsientoCabecera.findByPk(id, { transaction });
         if (!asiento) {
+            await transaction.rollback();
             return res.status(404).json({ msg: 'Asiento no encontrado' });
         }
-        if (asiento.estado === 'procesado') {
-            return res.status(400).json({ msg: 'El asiento ya está procesado' });
+
+        // D.1 + bloqueo explícito de 'anulado': solo 'pendiente' puede
+        // procesarse. Antes solo se rechazaba 'procesado', dejando
+        // 'anulado' pasar la validación por error.
+        if (asiento.estado !== 'pendiente') {
+            await transaction.rollback();
+            return res.status(400).json({
+                msg: asiento.estado === 'procesado'
+                    ? 'El asiento ya está procesado'
+                    : 'No se puede procesar un asiento anulado'
+            });
         }
+
         if (Math.abs(parseFloat(asiento.diferencia)) > 0.01) {
+            await transaction.rollback();
             return res.status(400).json({ msg: 'No se puede procesar un asiento no balanceado' });
         }
 
-        await asiento.update({ estado: 'procesado' });
+        await asiento.update({ estado: 'procesado' }, { transaction });
 
         await registrarMovimiento({
             id_usuario: req.usuario.id_usuario,
             id_empresa: asiento.id_empresa,
             tipo: 'PROCESO_ASIENTO',
             descripcion: `Procesó el asiento ${asiento.numero_asiento}`,
-            referencia_id: asiento.id_asiento
+            referencia_id: asiento.id_asiento,
+            transaction
         });
+
+        await transaction.commit();
 
         res.json({ msg: 'Asiento procesado', asiento });
     } catch (error) {
+        await transaction.rollback();
         console.error(error);
         res.status(500).json({ msg: 'Error al procesar asiento' });
     }

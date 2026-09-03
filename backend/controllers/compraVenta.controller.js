@@ -643,3 +643,90 @@ export const desactivarCompraVenta = async (req, res) => {
         res.status(500).json({ msg: 'Error al desactivar registro' });
     }
 };
+
+/**
+ * ACCIÓN DE NEGOCIO: anula una compra/venta ya imputada junto con su
+ * AsientoCabecera asociado. El asiento se encuentra EXCLUSIVAMENTE por la
+ * FK formal (id_compraventa) -nunca por numero_asiento, documento ni
+ * parseo de strings. No borra nada físicamente: AsientoCabecera pasa a
+ * estado='anulado' (excluido de reportes) y CompraVenta pasa a estado=0
+ * (excluido de duplicados), pero conserva imputada='SI' como historial.
+ * Todo dentro de una única transacción -si cualquier paso falla, rollback
+ * completo y ningún cambio queda aplicado.
+ */
+export const anularCompraVenta = async (req, res) => {
+    const { id } = req.params;
+    const transaction = await db.transaction();
+
+    try {
+        const registro = await CompraVenta.findByPk(id, { transaction });
+        if (!registro) {
+            await transaction.rollback();
+            return res.status(404).json({ msg: 'Registro no encontrado' });
+        }
+
+        const sucursal = await Sucursal.findByPk(registro.id_sucursal, { transaction });
+        if (!sucursal) {
+            await transaction.rollback();
+            return res.status(400).json({ msg: 'La sucursal indicada no existe' });
+        }
+        const id_empresa = sucursal.id_empresa;
+
+        if (!(await puedeAccederAEmpresa(req, id_empresa))) {
+            await transaction.rollback();
+            return res.status(403).json({ msg: 'No tenés permiso para anular compras/ventas de esta empresa' });
+        }
+
+        if (registro.estado !== 1) {
+            await transaction.rollback();
+            return res.status(400).json({ msg: 'Esta compra/venta ya está anulada o desactivada' });
+        }
+
+        if (registro.imputada !== 'SI') {
+            await transaction.rollback();
+            return res.status(400).json({
+                msg: 'Solo se puede anular una compra/venta que ya fue imputada. Un borrador se desactiva con el DELETE correspondiente.'
+            });
+        }
+
+        const asiento = await AsientoCabecera.findOne({
+            where: { id_compraventa: registro.id_compraventa },
+            transaction
+        });
+        if (!asiento) {
+            await transaction.rollback();
+            return res.status(409).json({
+                msg: 'No se encontró el asiento contable asociado a esta compra/venta. No se puede anular de forma segura.'
+            });
+        }
+
+        if (asiento.estado === 'anulado') {
+            await transaction.rollback();
+            return res.status(400).json({ msg: 'El asiento asociado ya está anulado' });
+        }
+
+        await asiento.update({ estado: 'anulado' }, { transaction });
+        await registro.update({ estado: 0 }, { transaction }); // imputada se mantiene en 'SI': queda como historial
+
+        await registrarMovimiento({
+            id_usuario: req.usuario.id_usuario,
+            id_empresa,
+            tipo: registro.tipo === 'COMPRA' ? 'ANULO_COMPRA' : 'ANULO_VENTA',
+            descripcion: `Anuló la ${registro.tipo === 'COMPRA' ? 'compra' : 'venta'} N° ${registro.numero_factura} y su asiento ${asiento.numero_asiento} (id_asiento ${asiento.id_asiento})`,
+            referencia_id: registro.id_compraventa,
+            transaction
+        });
+
+        await transaction.commit();
+
+        res.json({
+            msg: 'Compra/venta anulada correctamente junto con su asiento contable',
+            registro,
+            id_asiento_anulado: asiento.id_asiento
+        });
+    } catch (error) {
+        await transaction.rollback();
+        console.error(error);
+        res.status(500).json({ msg: error.message || 'Error al anular el registro' });
+    }
+};
