@@ -1,6 +1,6 @@
 <template>
-  <div class="fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4">
-    <div class="w-full max-w-6xl h-[85vh] flex flex-col sm:flex-row gap-4">
+  <div class="fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-3">
+    <div class="w-[97vw] h-[95vh] flex flex-col sm:flex-row gap-3">
 
       <!-- PDF -->
       <div class="flex-1 bg-white rounded-xl shadow-2xl flex flex-col overflow-hidden min-h-75">
@@ -19,7 +19,7 @@
       </div>
 
       <!-- Chat -->
-      <div class="w-full sm:w-80 shrink-0 h-64 sm:h-full">
+      <div class="w-full sm:w-72 shrink-0 h-64 sm:h-full">
         <ChatConversacion :id-sala="idSala" :id-alumno="idAlumno" :nombre-alumno="nombreAlumno" @cerrar="cerrar" />
       </div>
 
