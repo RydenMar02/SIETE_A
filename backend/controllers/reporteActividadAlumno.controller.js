@@ -22,7 +22,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const hbs = create();
 
 /** DATE(createdAt) = :fecha, reutilizable en cualquier where de Sequelize */
-const filtroDelDia = (fecha) => sequelizeWhere(fn('DATE', col('createdAt')), fecha);
+const filtroDelDia = (fecha, alias) => sequelizeWhere(fn('DATE', col(`${alias}.createdAt`)), fecha);
 
 /**
  * Resuelve Sala -> Alumno -> Empresa desde BD, sin confiar en nada que
@@ -65,16 +65,16 @@ const resolverContexto = async (req, id_sala, id_usuario) => {
 const construirReporteActividad = async (id_empresa, id_usuario, fecha) => {
     const [sucursales, clientes, proveedores, cuentasManuales, compras, ventas, asientos, movimientos] = await Promise.all([
         Sucursal.findAll({
-            where: { id_empresa, [Op.and]: filtroDelDia(fecha) },
+            where: { id_empresa, [Op.and]: filtroDelDia(fecha, 'Sucursal') },
             order: [['createdAt', 'ASC']]
         }),
         ClienteProveedor.findAll({
-            where: { id_empresa, tipo: 'CLIENTE', [Op.and]: filtroDelDia(fecha) },
+            where: { id_empresa, tipo: 'CLIENTE', [Op.and]: filtroDelDia(fecha, 'ClienteProveedor') },
             include: [{ model: Ciudad, attributes: ['nombre'] }],
             order: [['createdAt', 'ASC']]
         }),
         ClienteProveedor.findAll({
-            where: { id_empresa, tipo: 'PROVEEDOR', [Op.and]: filtroDelDia(fecha) },
+            where: { id_empresa, tipo: 'PROVEEDOR', [Op.and]: filtroDelDia(fecha, 'ClienteProveedor') },
             include: [{ model: Ciudad, attributes: ['nombre'] }],
             order: [['createdAt', 'ASC']]
         }),
@@ -82,11 +82,11 @@ const construirReporteActividad = async (id_empresa, id_usuario, fecha) => {
             // Regla ya definida: pordefecto=0 son las creadas manualmente
             // por el alumno -las ~303 copiadas del plan maestro tienen
             // pordefecto=1 y NUNCA deben aparecer acá.
-            where: { id_empresa, pordefecto: 0, [Op.and]: filtroDelDia(fecha) },
+            where: { id_empresa, pordefecto: 0, [Op.and]: filtroDelDia(fecha, 'EmpresaCuenta') },
             order: [['createdAt', 'ASC']]
         }),
         CompraVenta.findAll({
-            where: { tipo: 'COMPRA', [Op.and]: filtroDelDia(fecha) },
+            where: { tipo: 'COMPRA', [Op.and]: filtroDelDia(fecha, 'CompraVenta') },
             include: [
                 { model: Sucursal, where: { id_empresa }, attributes: ['nombre'] },
                 { model: ClienteProveedor, attributes: ['razon_social', 'numero_identificacion'] }
@@ -94,7 +94,7 @@ const construirReporteActividad = async (id_empresa, id_usuario, fecha) => {
             order: [['createdAt', 'ASC']]
         }),
         CompraVenta.findAll({
-            where: { tipo: 'VENTA', [Op.and]: filtroDelDia(fecha) },
+            where: { tipo: 'VENTA', [Op.and]: filtroDelDia(fecha, 'CompraVenta') },
             include: [
                 { model: Sucursal, where: { id_empresa }, attributes: ['nombre'] },
                 { model: ClienteProveedor, attributes: ['razon_social', 'numero_identificacion'] }
@@ -104,7 +104,7 @@ const construirReporteActividad = async (id_empresa, id_usuario, fecha) => {
         AsientoCabecera.findAll({
             // Reporte de actividad: a propósito NO se excluye estado='anulado'
             // acá -esto muestra "qué hizo el alumno", no un reporte contable.
-            where: { id_empresa, [Op.and]: filtroDelDia(fecha) },
+            where: { id_empresa, [Op.and]: filtroDelDia(fecha, 'AsientoCabecera') },
             include: [
                 { model: Sucursal, as: 'sucursal', attributes: ['nombre'] },
                 {
@@ -116,7 +116,7 @@ const construirReporteActividad = async (id_empresa, id_usuario, fecha) => {
             order: [['createdAt', 'ASC']]
         }),
         Movimiento.findAll({
-            where: { id_usuario, id_empresa, [Op.and]: filtroDelDia(fecha) },
+            where: { id_usuario, id_empresa, [Op.and]: filtroDelDia(fecha, 'Movimiento') },
             order: [['createdAt', 'ASC']]
         })
     ]);
