@@ -175,8 +175,8 @@ const grupos: GrupoMenu[] = [
       { label: 'Libro Mayor', icono: 'mdi:book-multiple', to: '/libromayor' },
       { label: 'Balances', icono: 'mdi:chart-bar', to: '/balances' }*/
     ]
-  },
-  {
+  }
+/*   {
     clave: 'configuracion',
     titulo: 'Configuración',
     icono: 'mdi:cog-outline',
@@ -185,7 +185,7 @@ const grupos: GrupoMenu[] = [
       { label: 'Configuración', icono: 'mdi:wrench-cog-outline', to: '/config' },
       { label: 'Ayuda', icono: 'mdi:help', to: '/ayuda' }
     ]
-  }
+  } */
 ]
 
 const gruposVisibles = computed(() => grupos.filter((g) => g.roles.includes(sesion.idRol)))

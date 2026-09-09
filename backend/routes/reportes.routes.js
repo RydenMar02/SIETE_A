@@ -11,12 +11,18 @@ import { getVentasPorEmpresa, reporteVentasPDF } from '../controllers/reportesVe
 import { getLibroDiario, reporteLibroDiarioPDF } from '../controllers/reportesLibroDiario.controller.js';
 import { getLibroMayor, reporteLibroMayorPDF } from '../controllers/reportesLibroMayor.controller.js';
 import { getEstadoResultados, getBalanceGeneral } from '../controllers/reportesFinancieros.controller.js';
+import { getReporteActividadAlumno, reporteActividadAlumnoPDF } from '../controllers/reporteActividadAlumno.controller.js';
 
 const router = Router();
 
 // Asientos
 router.get('/asientos',              validarJWT, tieneRol(2, 3), getAsientosPorEmpresa);
 router.get('/asientos/pdf',          validarJWT, tieneRol(2, 3), reporteAsientosPDF);
+
+// Actividad del alumno (reconstruido dinámicamente, NO usa la tabla vieja `actividad`)
+// Solo admin (1) y profesor (2) -el alumno nunca puede pedir este reporte, ni el suyo propio.
+router.get('/actividad-alumno',      validarJWT, tieneRol(1, 2), getReporteActividadAlumno);
+router.get('/actividad-alumno/pdf',  validarJWT, tieneRol(1, 2), reporteActividadAlumnoPDF);
 
 // Balance de sumas y saldos
 router.get('/balance-sumas',         validarJWT, tieneRol(2, 3), getBalanceSumas);

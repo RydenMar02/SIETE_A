@@ -26,7 +26,7 @@ router.get('/:id',         validarJWT, tieneRol(2, 3), validarPertenenciaEmpresa
 router.get('/codigo/:codigo', validarJWT, tieneRol(2, 3), getCuentaByCode);
 
 router.post('/',
-    validarJWT, tieneRol(3),
+    validarJWT, tieneRol(2,3),
     [
         body('codigo').notEmpty().withMessage('El código es obligatorio'),
         body('nombre').notEmpty().withMessage('El nombre es obligatorio'),
@@ -39,7 +39,7 @@ router.post('/',
     crearEmpresaCuenta
 );
 
-router.put('/:id',    validarJWT, tieneRol(3), validarPertenenciaEmpresa(resolverDesdeEmpresaCuenta), actualizarEmpresaCuenta);
-router.delete('/:id', validarJWT, tieneRol(3), validarPertenenciaEmpresa(resolverDesdeEmpresaCuenta), desactivarEmpresaCuenta);
+router.put('/:id',    validarJWT, tieneRol(2,3), validarPertenenciaEmpresa(resolverDesdeEmpresaCuenta), actualizarEmpresaCuenta);
+router.delete('/:id', validarJWT, tieneRol(2,3), validarPertenenciaEmpresa(resolverDesdeEmpresaCuenta), desactivarEmpresaCuenta);
 
 export default router;

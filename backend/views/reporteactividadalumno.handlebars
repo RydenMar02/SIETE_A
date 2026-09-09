@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>REPORTE DE ACTIVIDAD DEL ALUMNO</title>
+
+  <style>
+    @page {
+      size: A4;
+      margin: 20mm;
+
+      @bottom-right {
+        content: "Hoja " counter(page) " de " counter(pages);
+        font-family: "Arial Narrow", Arial, sans-serif;
+        font-size: 8pt;
+      }
+    }
+
+    body {
+      font-family: "Arial Narrow", Arial, sans-serif;
+      font-size: 8pt;
+      color: #000;
+      margin: 0;
+      padding: 0;
+      position: relative;
+    }
+
+    .encabezado {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #000;
+      padding: 10px 20px;
+      margin-bottom: 10px;
+    }
+
+    .encabezado img { height: 50px; }
+
+    .encabezado-texto {
+      text-align: center;
+      flex: 1;
+      font-size: 9pt;
+      line-height: 1.2;
+    }
+
+    .encabezado-texto strong {
+      display: block;
+      font-size: 11pt;
+      margin-bottom: 3px;
+    }
+
+    .barra-inferior {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 8pt;
+      margin-top: 10px;
+      padding: 0 20px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+      margin-top: 5px;
+      margin-bottom: 10px;
+      font-size: 13pt;
+      text-transform: uppercase;
+      position: relative;
+      z-index: 2;
+    }
+
+    .info-general {
+      padding: 0 20px;
+      margin-bottom: 12px;
+      position: relative;
+      z-index: 2;
+      font-size: 8.5pt;
+      line-height: 1.5;
+    }
+
+    .info-general strong { display: inline-block; width: 70px; }
+
+    .resumen {
+      margin: 0 20px 16px 20px;
+      border: 1px solid #999;
+      padding: 8px 12px;
+      position: relative;
+      z-index: 2;
+      font-size: 8pt;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2px 20px;
+    }
+
+    .resumen h3 {
+      grid-column: 1 / -1;
+      margin: 0 0 4px 0;
+      font-size: 9pt;
+    }
+
+    .seccion {
+      padding: 0 20px;
+      margin-top: 16px;
+      margin-bottom: 6px;
+      position: relative;
+      z-index: 2;
+      page-break-inside: avoid;
+    }
+
+    .seccion h2 {
+      font-size: 10pt;
+      margin: 0 0 6px 0;
+      border-top: 1px solid #999;
+      padding-top: 8px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 7.5pt;
+      margin-bottom: 4px;
+      position: relative;
+      z-index: 2;
+    }
+
+    th, td {
+      border: 1px solid #000;
+      padding: 2px 4px;
+      text-align: left;
+    }
+
+    th {
+      font-size: 8pt;
+      text-align: center;
+      background-color: #f8f8f8;
+    }
+
+    .detalle-asiento {
+      margin: 4px 0 8px 12px;
+      width: calc(100% - 12px);
+    }
+
+    .sin-registros {
+      font-style: italic;
+      color: #555;
+      margin: 0 0 4px 0;
+    }
+
+    .marca-agua {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      opacity: 0.15;
+      z-index: 0;
+      width: 380px;
+      pointer-events: none;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="encabezado">
+    <img src="{{unc}}" alt="Logo Izquierdo">
+    <div class="encabezado-texto">
+      <strong>UNIVERSIDAD NACIONAL DE CONCEPCIÓN</strong>
+      FACULTAD DE CIENCIAS ECONÓMICAS Y ADMINISTRATIVAS<br>
+      CARRERA DE CONTADURÍA PÚBLICA
+    </div>
+    <img src="{{fcea}}" alt="Logo Derecho">
+  </div>
+
+  <div class="barra-inferior">
+    <div><h3>Sala: {{sala}}</h3></div>
+    <div id="fecha-hora"></div>
+  </div>
+
+  <h1>Reporte de Actividad del Alumno</h1>
+
+  <div class="info-general">
+    <div><strong>Alumno:</strong> {{alumno}}</div>
+    <div><strong>Empresa:</strong> {{empresa}}{{#if ruc}} — RUC: {{ruc}}{{/if}}</div>
+    <div><strong>Fecha:</strong> {{fecha}}</div>
+  </div>
+
+  <div class="resumen">
+    <h3>Resumen del día</h3>
+    <div>Sucursales creadas: {{resumen.sucursales}}</div>
+    <div>Clientes creados: {{resumen.clientes}}</div>
+    <div>Proveedores creados: {{resumen.proveedores}}</div>
+    <div>Cuentas creadas: {{resumen.cuentas}}</div>
+    <div>Compras registradas: {{resumen.compras}}</div>
+    <div>Ventas registradas: {{resumen.ventas}}</div>
+    <div>Asientos creados: {{resumen.asientos}}</div>
+    <div>Movimientos registrados: {{resumen.movimientos}}</div>
+  </div>
+
+  <!-- 1. SUCURSALES -->
+  <div class="seccion">
+    <h2>1. Sucursales creadas</h2>
+    {{#if sucursales}}
+    <table>
+      <thead><tr><th>Código</th><th>Nombre</th><th>Responsable</th><th>Teléfono</th><th>Estado</th><th>Hora</th></tr></thead>
+      <tbody>
+        {{#each sucursales}}
+        <tr><td>{{codigo}}</td><td>{{nombre}}</td><td>{{responsable}}</td><td>{{telefono}}</td><td>{{estado}}</td><td>{{hora}}</td></tr>
+        {{/each}}
+      </tbody>
+    </table>
+    {{else}}
+    <p class="sin-registros">Sin registros.</p>
+    {{/if}}
+  </div>
+
+  <!-- 2. CLIENTES -->
+  <div class="seccion">
+    <h2>2. Clientes creados</h2>
+    {{#if clientes}}
+    <table>
+      <thead><tr><th>Razón Social</th><th>RUC/CI</th><th>Ciudad</th><th>Teléfono</th><th>Estado</th><th>Hora</th></tr></thead>
+      <tbody>
+        {{#each clientes}}
+        <tr><td>{{razon_social}}</td><td>{{numero_identificacion}}</td><td>{{ciudad}}</td><td>{{telefono}}</td><td>{{estado}}</td><td>{{hora}}</td></tr>
+        {{/each}}
+      </tbody>
+    </table>
+    {{else}}
+    <p class="sin-registros">Sin registros.</p>
+    {{/if}}
+  </div>
+
+  <!-- 3. PROVEEDORES -->
+  <div class="seccion">
+    <h2>3. Proveedores creados</h2>
+    {{#if proveedores}}
+    <table>
+      <thead><tr><th>Razón Social</th><th>RUC/CI</th><th>Ciudad</th><th>Teléfono</th><th>Estado</th><th>Hora</th></tr></thead>
+      <tbody>
+        {{#each proveedores}}
+        <tr><td>{{razon_social}}</td><td>{{numero_identificacion}}</td><td>{{ciudad}}</td><td>{{telefono}}</td><td>{{estado}}</td><td>{{hora}}</td></tr>
+        {{/each}}
+      </tbody>
+    </table>
+    {{else}}
+    <p class="sin-registros">Sin registros.</p>
+    {{/if}}
+  </div>
+
+  <!-- 4. CUENTAS -->
+  <div class="seccion">
+    <h2>4. Cuentas creadas manualmente</h2>
+    {{#if cuentas}}
+    <table>
+      <thead><tr><th>Código</th><th>Nombre</th><th>Nivel</th><th>Naturaleza</th><th>Asentable</th><th>Cuenta padre</th><th>Estado</th><th>Hora</th></tr></thead>
+      <tbody>
+        {{#each cuentas}}
+        <tr><td>{{codigo}}</td><td>{{nombre}}</td><td>{{nivel}}</td><td>{{naturaleza}}</td><td>{{asentable}}</td><td>{{codigo_padre}} - {{nombre_padre}}</td><td>{{estado}}</td><td>{{hora}}</td></tr>
+        {{/each}}
+      </tbody>
+    </table>
+    {{else}}
+    <p class="sin-registros">Sin registros.</p>
+    {{/if}}
+  </div>
+
+  <!-- 5. COMPRAS -->
+  <div class="seccion">
+    <h2>5. Compras registradas</h2>
+    {{#if compras}}
+    <table>
+      <thead><tr><th>Factura</th><th>Timbrado</th><th>Proveedor</th><th>Sucursal</th><th>Total</th><th>Exenta</th><th>Grav. 10%</th><th>Grav. 5%</th><th>Estado</th><th>Hora</th></tr></thead>
+      <tbody>
+        {{#each compras}}
+        <tr><td>{{numero_factura}}</td><td>{{numero_timbrado}}</td><td>{{tercero}}</td><td>{{sucursal}}</td><td style="text-align:right;">{{total_factura}}</td><td style="text-align:right;">{{exenta}}</td><td style="text-align:right;">{{gravada10}}</td><td style="text-align:right;">{{gravada05}}</td><td>{{estado}}</td><td>{{hora}}</td></tr>
+        {{/each}}
+      </tbody>
+    </table>
+    {{else}}
+    <p class="sin-registros">Sin registros.</p>
+    {{/if}}
+  </div>
+
+  <!-- 6. VENTAS -->
+  <div class="seccion">
+    <h2>6. Ventas registradas</h2>
+    {{#if ventas}}
+    <table>
+      <thead><tr><th>Factura</th><th>Timbrado</th><th>Cliente</th><th>Sucursal</th><th>Total</th><th>Exenta</th><th>Grav. 10%</th><th>Grav. 5%</th><th>Estado</th><th>Hora</th></tr></thead>
+      <tbody>
+        {{#each ventas}}
+        <tr><td>{{numero_factura}}</td><td>{{numero_timbrado}}</td><td>{{tercero}}</td><td>{{sucursal}}</td><td style="text-align:right;">{{total_factura}}</td><td style="text-align:right;">{{exenta}}</td><td style="text-align:right;">{{gravada10}}</td><td style="text-align:right;">{{gravada05}}</td><td>{{estado}}</td><td>{{hora}}</td></tr>
+        {{/each}}
+      </tbody>
+    </table>
+    {{else}}
+    <p class="sin-registros">Sin registros.</p>
+    {{/if}}
+  </div>
+
+  <!-- 7. ASIENTOS -->
+  <div class="seccion">
+    <h2>7. Asientos creados</h2>
+    {{#if asientos}}
+      {{#each asientos}}
+      <table>
+        <thead><tr><th>N° Asiento</th><th>Fecha</th><th>Tipo</th><th>Concepto</th><th>Sucursal</th><th>CompraVenta</th><th>Estado</th><th>Hora</th></tr></thead>
+        <tbody>
+          <tr><td>{{numero_asiento}}</td><td>{{fecha}}</td><td>{{tipo_asiento}}</td><td>{{concepto}}</td><td>{{sucursal}}</td><td>{{id_compraventa}}</td><td>{{estado}}</td><td>{{hora}}</td></tr>
+        </tbody>
+      </table>
+      <table class="detalle-asiento">
+        <thead><tr><th>Cuenta</th><th>Debe</th><th>Haber</th></tr></thead>
+        <tbody>
+          {{#each detalles}}
+          <tr><td>{{codigo}} - {{nombre}}</td><td style="text-align:right;">{{debe}}</td><td style="text-align:right;">{{haber}}</td></tr>
+          {{/each}}
+        </tbody>
+      </table>
+      {{/each}}
+    {{else}}
+    <p class="sin-registros">Sin registros.</p>
+    {{/if}}
+  </div>
+
+  <!-- 8. MOVIMIENTOS / CRONOLOGÍA -->
+  <div class="seccion">
+    <h2>8. Cronología de movimientos</h2>
+    {{#if movimientos}}
+    <table>
+      <thead><tr><th>Hora</th><th>Tipo</th><th>Descripción</th><th>Referencia</th></tr></thead>
+      <tbody>
+        {{#each movimientos}}
+        <tr><td>{{hora}}</td><td>{{tipo}}</td><td>{{descripcion}}</td><td>{{referencia_id}}</td></tr>
+        {{/each}}
+      </tbody>
+    </table>
+    {{else}}
+    <p class="sin-registros">Sin registros.</p>
+    {{/if}}
+  </div>
+
+  <img src="{{marcaAgua}}" class="marca-agua" alt="Marca de agua">
+
+  <script>
+    const ahora = new Date();
+    const opcionesFecha = { day: '2-digit', month: '2-digit', year: 'numeric' };
+    const fecha = ahora.toLocaleDateString('es-PY', opcionesFecha);
+    const hora = ahora.toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' });
+    document.getElementById('fecha-hora').innerHTML = `${fecha}<br>${hora}`;
+  </script>
+</body>
+
+</html>

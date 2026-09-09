@@ -91,6 +91,29 @@
       color: #333;
     }
 
+    /* SECCIÓN POR CUENTA */
+    .cuenta-seccion {
+      padding: 0 20px;
+      margin-top: 16px;
+      margin-bottom: 6px;
+      position: relative;
+      z-index: 2;
+      page-break-inside: avoid;
+    }
+
+    .cuenta-seccion h2 {
+      font-size: 10pt;
+      margin: 0 0 2px 0;
+      border-top: 1px solid #999;
+      padding-top: 8px;
+    }
+
+    .cuenta-seccion .naturaleza {
+      font-size: 8pt;
+      color: #333;
+      margin-bottom: 4px;
+    }
+
     /* TABLA DE MOVIMIENTOS */
     table {
       width: 100%;
@@ -164,7 +187,7 @@
   <h1>LIBRO MAYOR</h1>
 
   <div class="cuenta-info">
-    <h3>{{cuenta.codigo}} — {{cuenta.nombre}} ({{cuenta.naturaleza}})</h3>
+    <h3>Empresa: {{empresa}}{{#if ruc}} — RUC: {{ruc}}{{/if}}</h3>
     {{#if fecha_desde}}
       {{#if fecha_hasta}}
         <div class="rango">Período: {{fecha_desde}} a {{fecha_hasta}}</div>
@@ -180,57 +203,52 @@
     {{/if}}
   </div>
 
-  {{#if movimientos}}
-  <table>
-    <thead>
-      <tr>
-        <th>Fecha</th>
-        <th>N° Asiento</th>
-        <th>Documento</th>
-        <th>Concepto</th>
-        <th>Debe (Gs.)</th>
-        <th>Haber (Gs.)</th>
-        <th>Saldo (Gs.)</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr class="saldo-inicial">
-        <td colspan="6" style="text-align:right;">Saldo inicial:</td>
-        <td style="text-align:right;">{{saldo_inicial}}</td>
-      </tr>
-      {{#each movimientos}}
-      <tr>
-        <td>{{fecha}}</td>
-        <td>{{numero_asiento}}</td>
-        <td>{{documento}}</td>
-        <td>{{concepto}}</td>
-        <td style="text-align:right;">{{debe}}</td>
-        <td style="text-align:right;">{{haber}}</td>
-        <td style="text-align:right;">{{saldo}}</td>
-      </tr>
-      {{/each}}
-      <tr class="saldo-final">
-        <td colspan="6" style="text-align:right;">Saldo final:</td>
-        <td style="text-align:right;">{{saldo_final}}</td>
-      </tr>
-    </tbody>
-  </table>
+  {{#if cuentas}}
+  {{#each cuentas}}
+  <div class="cuenta-seccion">
+    <h2>CUENTA: {{codigo}} — {{nombre}}</h2>
+    <div class="naturaleza">Naturaleza: {{naturaleza}}</div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>N° Asiento</th>
+          <th>Documento</th>
+          <th>Concepto</th>
+          <th>Debe (Gs.)</th>
+          <th>Haber (Gs.)</th>
+          <th>Saldo (Gs.)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="saldo-inicial">
+          <td colspan="6" style="text-align:right;">Saldo inicial:</td>
+          <td style="text-align:right;">{{saldo_inicial}}</td>
+        </tr>
+        {{#each movimientos}}
+        <tr>
+          <td>{{fecha}}</td>
+          <td>{{numero_asiento}}</td>
+          <td>{{documento}}</td>
+          <td>{{concepto}}</td>
+          <td style="text-align:right;">{{debe}}</td>
+          <td style="text-align:right;">{{haber}}</td>
+          <td style="text-align:right;">{{saldo}}</td>
+        </tr>
+        {{/each}}
+        <tr class="saldo-final">
+          <td colspan="6" style="text-align:right;">Saldo final:</td>
+          <td style="text-align:right;">{{saldo_final}}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  {{/each}}
   {{else}}
   <p class="sin-movimientos">
-    No existen movimientos para la cuenta y período seleccionados.
+    No existen movimientos para la empresa y período seleccionados.
   </p>
-  <table>
-    <tbody>
-      <tr class="saldo-inicial">
-        <td style="text-align:right; width:85%;">Saldo inicial:</td>
-        <td style="text-align:right;">{{saldo_inicial}}</td>
-      </tr>
-      <tr class="saldo-final">
-        <td style="text-align:right;">Saldo final:</td>
-        <td style="text-align:right;">{{saldo_final}}</td>
-      </tr>
-    </tbody>
-  </table>
   {{/if}}
 
   <img src="{{marcaAgua}}" class="marca-agua" alt="Marca de agua">
