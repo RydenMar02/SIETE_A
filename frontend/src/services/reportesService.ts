@@ -38,7 +38,7 @@ export const abrirReportePdf = async (tipo: TipoReporte, idEmpresa: number) => {
 // cierre esa vista, para no quedarse con memoria reservada de más.
 export const obtenerBlobReporteActividadAlumno = async (idSala: number, idAlumno: number, fecha: string) => {
   const response = await api.get(`${BASE}/actividad-alumno/pdf`, {
-    params: { id_sala: idSala, id_alumno: idAlumno, fecha },
+    params: { id_sala: idSala, id_usuario: idAlumno, fecha },
     responseType: 'blob'
   })
   return URL.createObjectURL(response.data)
