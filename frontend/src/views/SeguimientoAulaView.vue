@@ -52,6 +52,13 @@
                   </button>
                   <button
                     type="button"
+                    class="flex-1 bg-teal-700 hover:bg-teal-800 text-white text-xs font-medium py-1.5 rounded-md transition"
+                    @click="abrirReporte(alumno)"
+                  >
+                    Ver
+                  </button>
+                  <button
+                    type="button"
                     :disabled="!alumno.conectado"
                     :title="alumno.conectado ? '' : 'El alumno está desconectado'"
                     class="flex-1 text-white text-xs font-medium py-1.5 rounded-md transition"
@@ -87,6 +94,16 @@
       :nombre-alumno="alumnoEspectado.nombre"
       @cerrar="alumnoEspectado = null"
     />
+
+    <!-- Reporte de actividad del día + chat, lado a lado -->
+    <ReporteActividadAlumnoPanel
+      v-if="alumnoReporte"
+      :id-sala="seleccion.idSala"
+      :id-alumno="alumnoReporte.id_usuario"
+      :nombre-alumno="alumnoReporte.nombre"
+      :fecha="fechaDeHoy"
+      @cerrar="alumnoReporte = null"
+    />
   </div>
 </template>
 
@@ -96,6 +113,7 @@ import Navbar from '@/components/NavbarComponent.vue'
 import Siderbar from '@/components/SiderbarComponent.vue'
 import ChatConAlumnoModal from '@/components/ChatconAlumnoModal.vue'
 import EspectarAlumnoModal from '@/components/EspectarAlumnoModal.vue'
+import ReporteActividadAlumnoPanel from '@/components/ReporteActividadAlumnoPanel.vue'
 import { useSesionStore } from '@/stores/useSesionStore'
 import { useSeleccionStore } from '@/stores/useSeleccionStore'
 import { useTiempoRealStore, type AlumnoPresencia } from '@/stores/useTiempoRealStore'
@@ -184,6 +202,23 @@ const alumnoEspectado = ref<Alumno | null>(null)
 
 const abrirEspectar = (alumno: Alumno) => {
   alumnoEspectado.value = alumno
+}
+
+// ---------- Ver reporte de actividad del día ----------
+const alumnoReporte = ref<Alumno | null>(null)
+
+// YYYY-MM-DD en horario local, no UTC (toISOString() se corre de día cerca
+// de la medianoche según el huso horario del navegador).
+const fechaDeHoy = computed(() => {
+  const hoy = new Date()
+  const anio = hoy.getFullYear()
+  const mes = String(hoy.getMonth() + 1).padStart(2, '0')
+  const dia = String(hoy.getDate()).padStart(2, '0')
+  return `${anio}-${mes}-${dia}`
+})
+
+const abrirReporte = (alumno: Alumno) => {
+  alumnoReporte.value = alumno
 }
 
 onMounted(() => {

@@ -30,3 +30,16 @@ export const abrirReportePdf = async (tipo: TipoReporte, idEmpresa: number) => {
 
   setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000)
 }
+
+// A diferencia de abrirReportePdf, esto no abre una pestaña nueva: devuelve
+// el blob URL para que el llamador lo use en un <iframe> (vista previa
+// incrustada, ej. el panel de "Ver reporte" en Seguimiento en aula). Queda
+// a cargo de quien lo use revocar el blob con URL.revokeObjectURL cuando
+// cierre esa vista, para no quedarse con memoria reservada de más.
+export const obtenerBlobReporteActividadAlumno = async (idSala: number, idAlumno: number, fecha: string) => {
+  const response = await api.get(`${BASE}/actividad-alumno/pdf`, {
+    params: { id_sala: idSala, id_alumno: idAlumno, fecha },
+    responseType: 'blob'
+  })
+  return URL.createObjectURL(response.data)
+}
