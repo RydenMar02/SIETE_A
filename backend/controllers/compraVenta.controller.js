@@ -10,11 +10,7 @@ import { puedeAccederAEmpresa } from '../middlewares/pertenencia.middleware.js';
 import { registrarMovimiento } from '../helpers/registrarMovimiento.js';
 import { validarEjercicioAbiertoParaEscritura } from '../helpers/ejercicioHelper.js';
 
-// Códigos del plan de cuentas estándar usados para resolver la cuenta de
-// contrapartida y la de IVA, que no vienen elegidas por el usuario en el
-// formulario de compra/venta (a diferencia de cuentaExenta/Grav10/Grav05,
-// que sí las elige él). Si tu plan de cuentas usa otros códigos para estas
-// cuentas, ajustá estas constantes.
+
 const CODIGO_CAJA = '1.1.1.2';
 const CODIGO_PROVEEDORES_LOCALES = '2.1.1.1';
 const CODIGO_DEUDORES_VENTAS = '1.1.3.1';
@@ -28,15 +24,7 @@ const buscarCuentaPorCodigo = async (id_empresa, codigo, transaction) => {
     });
 };
 
-/**
- * Arma los detalles (debe/haber) del asiento contable a partir de una
- * compra/venta, resolviendo la cuenta de contrapartida (caja, proveedores
- * o deudores) y la de IVA según el tipo y la condición de pago.
- *
- * Se reutiliza tal cual tanto desde la previsualización (GET
- * /:id/sugerencia-asiento) como desde la imputación real (POST
- * /:id/imputar) para no duplicar la lógica contable.
- */
+
 const armarDetallesAsiento = async (compraVenta, id_empresa, transaction) => {
     const detalles = [];
     const esCompra = compraVenta.tipo === 'COMPRA';
@@ -94,12 +82,7 @@ const armarDetallesAsiento = async (compraVenta, id_empresa, transaction) => {
     return detalles;
 };
 
-/**
- * Valida que el cliente/proveedor exista, pertenezca a la misma empresa que
- * la operación, y que su tipo (CLIENTE/PROVEEDOR) sea el correcto según si
- * la operación es una COMPRA o una VENTA.
- * Devuelve null si está todo bien, o { status, msg } si hay que rechazar.
- */
+
 const validarClienteProveedor = async (id_clienteproveedor, tipoOperacion, id_empresa, transaction) => {
     const clienteProveedor = await ClienteProveedor.findByPk(id_clienteproveedor, { transaction });
     if (!clienteProveedor) {
@@ -120,12 +103,7 @@ const validarClienteProveedor = async (id_clienteproveedor, tipoOperacion, id_em
     return null;
 };
 
-/**
- * Busca una compra/venta ACTIVA que choque con la regla de duplicados:
- *  - COMPRA: mismo id_clienteproveedor + numero_timbrado + numero_factura.
- *  - VENTA:  mismo id_sucursal + numero_timbrado + numero_factura.
- * Si se pasa id_compraventa_excluir (caso UPDATE), se ignora ese propio registro.
- */
+
 const buscarDuplicado = async (tipoOperacion, id_clienteproveedor, id_sucursal, numero_timbrado, numero_factura, id_compraventa_excluir, transaction) => {
     const where = {
         tipo: tipoOperacion,
@@ -144,11 +122,7 @@ const buscarDuplicado = async (tipoOperacion, id_clienteproveedor, id_sucursal, 
     return CompraVenta.findOne({ where, transaction });
 };
 
-/**
- * Valida que una cuenta de contenido (exenta/grav10/grav05) elegida por el
- * alumno exista, pertenezca a esta empresa y sea asentable. Evita imputar o
- * guardar una referencia a la cuenta de otra empresa.
- */
+
 const validarCuentaDeContenido = async (id_empresacuenta, id_empresa, etiqueta, transaction) => {
     const cuenta = await EmpresaCuenta.findOne({
         where: { id_empresacuenta, id_empresa, estado: 1 },
@@ -218,15 +192,7 @@ export const getComprasVentas = async (req, res) => {
     }
 };
 
-/**
- * PREVISUALIZACIÓN DEL ASIENTO.
- * Devuelve las líneas debe/haber que se generarían si esta compra/venta se
- * imputara en este momento, usando exactamente la misma lógica contable que
- * POST /:id/imputar (armarDetallesAsiento). No persiste absolutamente nada:
- * no crea AsientoCabecera, no crea AsientoDetalle, no toca imputada.
- * Solo tiene sentido sobre un borrador (imputada='NO'); una vez imputada la
- * operación, el asiento real ya existe y se consulta por su propio módulo.
- */
+
 export const getSugerenciaAsiento = async (req, res) => {
     const { id } = req.params;
 
@@ -304,12 +270,6 @@ export const getCompraVentaById = async (req, res) => {
     }
 };
 
-/**
- * Crea SIEMPRE un borrador (imputada='NO'). El POST ya no genera asiento
- * bajo ninguna circunstancia -eso es responsabilidad exclusiva de
- * POST /:id/imputar-, así que cualquier valor de "imputada" que venga en
- * el body se ignora por completo.
- */
 export const crearCompraVenta = async (req, res) => {
     const transaction = await db.transaction();
 
@@ -326,12 +286,10 @@ export const crearCompraVenta = async (req, res) => {
             return res.status(403).json({ msg: 'No tenés permiso para cargar compras/ventas en esta empresa' });
         }
 
-        const ejercicioCerrado = await validarEjercicioAbiertoParaEscritura(id_empresa, req.body.fecha, transaction);
-        if (ejercicioCerrado) {
+        const validacionPeriodo = await validarEjercicioAbiertoParaEscritura({ id_empresa, fecha: req.body.fecha, transaction });
+        if (!validacionPeriodo.valido) {
             await transaction.rollback();
-            return res.status(400).json({
-                msg: `La fecha indicada pertenece al ejercicio "${ejercicioCerrado.nombre}", que ya está cerrado. No se pueden registrar operaciones en ese período.`
-            });
+            return res.status(validacionPeriodo.status).json({ msg: validacionPeriodo.msg });
         }
 
         const tipoOperacion = req.body.tipo?.toUpperCase();
@@ -387,13 +345,7 @@ export const crearCompraVenta = async (req, res) => {
     }
 };
 
-/**
- * ACCIÓN DE NEGOCIO: imputa contablemente un borrador (imputada='NO').
- * Genera el AsientoCabecera (con id_compraventa) + AsientoDetalle
- * correspondiente y recién ahí pasa imputada a 'SI'. Todo dentro de una
- * única transacción: si cualquier paso falla, no debe quedar ni el asiento
- * a medias ni la compra/venta marcada como imputada sin un asiento real.
- */
+
 export const imputarCompraVenta = async (req, res) => {
     const { id } = req.params;
     const transaction = await db.transaction();
@@ -423,13 +375,12 @@ export const imputarCompraVenta = async (req, res) => {
         const id_empresa = sucursal.id_empresa;
 
         // Cubre el escenario: borrador creado antes del cierre -> el
-        // ejercicio se cierra -> alguien intenta imputarlo después.
-        const ejercicioCerrado = await validarEjercicioAbiertoParaEscritura(id_empresa, registro.fecha, transaction);
-        if (ejercicioCerrado) {
+        // ejercicio/período se cierra -> alguien intenta imputarlo después.
+        // Se revalida acá, no se confía en lo que se validó al crear.
+        const validacionPeriodo = await validarEjercicioAbiertoParaEscritura({ id_empresa, fecha: registro.fecha, transaction });
+        if (!validacionPeriodo.valido) {
             await transaction.rollback();
-            return res.status(400).json({
-                msg: `Esta operación pertenece al ejercicio "${ejercicioCerrado.nombre}", que ya está cerrado. No se puede imputar.`
-            });
+            return res.status(validacionPeriodo.status).json({ msg: validacionPeriodo.msg });
         }
 
         const errorClienteProveedor = await validarClienteProveedor(
@@ -440,11 +391,7 @@ export const imputarCompraVenta = async (req, res) => {
             return res.status(errorClienteProveedor.status).json({ msg: errorClienteProveedor.msg });
         }
 
-        // Validar las cuentas de contenido que realmente van a formar parte
-        // del asiento (mismo filtro que usa armarDetallesAsiento: solo las
-        // que tienen importe > 0). Si hay importe pero no se eligió cuenta,
-        // se rechaza acá con un mensaje claro en vez de dejar que el asiento
-        // salga desbalanceado.
+
         const lineasDeContenido = [
             { id_empresacuenta: registro.id_cuentaexenta, monto: parseFloat(registro.exenta), etiqueta: 'exenta' },
             { id_empresacuenta: registro.id_cuentagrav10, monto: parseFloat(registro.base_imp_iva_10), etiqueta: 'gravada 10%' },
@@ -492,11 +439,7 @@ export const imputarCompraVenta = async (req, res) => {
             estado: 'pendiente'
         }, { transaction });
 
-        // Salvaguarda: si por cualquier motivo (código desactualizado en el
-        // proceso corriendo, modelo desalineado con la BD, etc.) el asiento
-        // quedó creado sin el id_compraventa correcto, no seguimos como si
-        // nada -abortamos todo antes de tocar AsientoDetalle o marcar
-        // imputada='SI', en vez de dejar un vínculo roto en silencio.
+
         if (Number(asientoCabecera.id_compraventa) !== Number(registro.id_compraventa)) {
             await transaction.rollback();
             console.error(
@@ -540,13 +483,6 @@ export const imputarCompraVenta = async (req, res) => {
     }
 };
 
-/**
- * Permite modificar un borrador (imputada='NO'). imputada e id_compraventa
- * nunca se aceptan por PUT -imputada solo cambia vía POST /:id/imputar-, y
- * tipo tampoco es editable (no está contemplado convertir una COMPRA en
- * VENTA o viceversa). Antes de guardar, se vuelve a validar todo contra los
- * valores EFECTIVOS (lo que ya tenía + lo que cambia en este request).
- */
 export const actualizarCompraVenta = async (req, res) => {
     const { id } = req.params;
     const { imputada, id_compraventa, tipo, ...datosEditables } = req.body;
@@ -581,26 +517,17 @@ export const actualizarCompraVenta = async (req, res) => {
             return res.status(403).json({ msg: 'No tenés permiso para modificar compras/ventas en esta empresa' });
         }
 
-        // Bloqueo post-cierre, en dos sentidos: la fecha ORIGINAL de la
-        // operación ya cerrada, y si el body trae una fecha NUEVA, que
-        // tampoco la mueva hacia adentro de un ejercicio cerrado. Usa la
-        // validación BLOQUEANTE (toma el lock de la fila de Ejercicio
-        // dentro de esta misma transacción) para cerrar la carrera con un
-        // cierre que pueda estar en curso simultáneamente.
-        const ejercicioCerradoOriginal = await validarEjercicioAbiertoParaEscritura(id_empresa, registro.fecha, transaction);
-        if (ejercicioCerradoOriginal) {
+
+        const validacionOriginal = await validarEjercicioAbiertoParaEscritura({ id_empresa, fecha: registro.fecha, transaction });
+        if (!validacionOriginal.valido) {
             await transaction.rollback();
-            return res.status(400).json({
-                msg: `Esta operación pertenece al ejercicio "${ejercicioCerradoOriginal.nombre}", que ya está cerrado. No se puede modificar.`
-            });
+            return res.status(validacionOriginal.status).json({ msg: validacionOriginal.msg });
         }
         if (datosEditables.fecha !== undefined && datosEditables.fecha !== registro.fecha) {
-            const ejercicioCerradoNuevo = await validarEjercicioAbiertoParaEscritura(id_empresa, datosEditables.fecha, transaction);
-            if (ejercicioCerradoNuevo) {
+            const validacionNueva = await validarEjercicioAbiertoParaEscritura({ id_empresa, fecha: datosEditables.fecha, transaction });
+            if (!validacionNueva.valido) {
                 await transaction.rollback();
-                return res.status(400).json({
-                    msg: `No se puede mover la operación a una fecha del ejercicio "${ejercicioCerradoNuevo.nombre}", que ya está cerrado.`
-                });
+                return res.status(validacionNueva.status).json({ msg: validacionNueva.msg });
             }
         }
 
@@ -669,45 +596,55 @@ export const actualizarCompraVenta = async (req, res) => {
 
 export const desactivarCompraVenta = async (req, res) => {
     const { id } = req.params;
+    const transaction = await db.transaction();
 
     try {
-        const registro = await CompraVenta.findByPk(id);
+        const registro = await CompraVenta.findByPk(id, { transaction });
         if (!registro) {
+            await transaction.rollback();
             return res.status(404).json({ msg: 'Registro no encontrado' });
         }
 
         if (registro.imputada === 'SI') {
+            await transaction.rollback();
             return res.status(400).json({ msg: 'No se puede eliminar una factura ya imputada' });
         }
 
-        await registro.update({ estado: 0 });
+        const sucursal = await Sucursal.findByPk(registro.id_sucursal, { transaction });
+        if (!sucursal) {
+            await transaction.rollback();
+            return res.status(400).json({ msg: 'La sucursal indicada no existe' });
+        }
+        const id_empresa = sucursal.id_empresa;
 
-        const sucursal = await Sucursal.findByPk(registro.id_sucursal);
+
+        const validacionPeriodo = await validarEjercicioAbiertoParaEscritura({ id_empresa, fecha: registro.fecha, transaction });
+        if (!validacionPeriodo.valido) {
+            await transaction.rollback();
+            return res.status(validacionPeriodo.status).json({ msg: validacionPeriodo.msg });
+        }
+
+        await registro.update({ estado: 0 }, { transaction });
+
         await registrarMovimiento({
             id_usuario: req.usuario.id_usuario,
-            id_empresa: sucursal.id_empresa,
+            id_empresa,
             tipo: registro.tipo === 'COMPRA' ? 'ELIMINO_COMPRA' : 'ELIMINO_VENTA',
             descripcion: `Eliminó la ${registro.tipo === 'COMPRA' ? 'compra' : 'venta'} N° ${registro.numero_factura}`,
-            referencia_id: registro.id_compraventa
+            referencia_id: registro.id_compraventa,
+            transaction
         });
+
+        await transaction.commit();
 
         res.json({ msg: 'Registro desactivado' });
     } catch (error) {
+        await transaction.rollback();
         console.error(error);
         res.status(500).json({ msg: 'Error al desactivar registro' });
     }
 };
 
-/**
- * ACCIÓN DE NEGOCIO: anula una compra/venta ya imputada junto con su
- * AsientoCabecera asociado. El asiento se encuentra EXCLUSIVAMENTE por la
- * FK formal (id_compraventa) -nunca por numero_asiento, documento ni
- * parseo de strings. No borra nada físicamente: AsientoCabecera pasa a
- * estado='anulado' (excluido de reportes) y CompraVenta pasa a estado=0
- * (excluido de duplicados), pero conserva imputada='SI' como historial.
- * Todo dentro de una única transacción -si cualquier paso falla, rollback
- * completo y ningún cambio queda aplicado.
- */
 export const anularCompraVenta = async (req, res) => {
     const { id } = req.params;
     const transaction = await db.transaction();
@@ -743,15 +680,11 @@ export const anularCompraVenta = async (req, res) => {
             });
         }
 
-        // C.6: no se puede alterar retroactivamente un ejercicio ya
-        // cerrado. No se genera ningún asiento de reversión -simplemente
-        // se rechaza la anulación.
-        const ejercicioCerrado = await validarEjercicioAbiertoParaEscritura(id_empresa, registro.fecha, transaction);
-        if (ejercicioCerrado) {
+
+        const validacionPeriodo = await validarEjercicioAbiertoParaEscritura({ id_empresa, fecha: registro.fecha, transaction });
+        if (!validacionPeriodo.valido) {
             await transaction.rollback();
-            return res.status(400).json({
-                msg: `Esta operación pertenece al ejercicio "${ejercicioCerrado.nombre}", que ya está cerrado. No se puede anular.`
-            });
+            return res.status(validacionPeriodo.status).json({ msg: validacionPeriodo.msg });
         }
 
         const asiento = await AsientoCabecera.findOne({
