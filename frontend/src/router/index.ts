@@ -59,6 +59,11 @@ const routes = [
     component: () => import('../views/HistorialMovimientosView.vue')
   },
   {
+    path: '/reportes',
+    name: 'reportes',
+    component: () => import('../views/ReportesView.vue')
+  },
+  {
     path: '/sucursal',
     name: 'sucursal',
     component: () => import('../views/SucursalesView.vue')
