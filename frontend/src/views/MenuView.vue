@@ -111,6 +111,7 @@
 
 <script lang="ts" setup>
 import { ref, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import {
   Chart as ChartJS,
@@ -130,10 +131,10 @@ import { useAlertas } from '@/composables/useAlertas'
 import { useSesionStore } from '@/stores/useSesionStore'
 import { useSeleccionStore } from '@/stores/useSeleccionStore'
 import { obtenerTopDatos as obtenerTopDatosService } from '@/services/graficosService'
-import { abrirReportePdf, type TipoReporte } from '@/services/reportesService'
 
 ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, ArcElement)
 
+const router = useRouter()
 const { makeAlert } = useAlertas()
 const sesion = useSesionStore()
 const seleccion = useSeleccionStore()
@@ -276,27 +277,16 @@ const fetchProveedores = async () => {
 }
 
 const fetchAllData = () => Promise.all([fetchSucursales(), fetchClientes(), fetchProveedores()])
-// ---------- Reportes PDF ----------
-// abrirReportePdf hace la petición autenticada (con token) y arma el blob,
-// necesario porque estas rutas están protegidas por validarJWT — un
-// window.open directo a la URL no llevaría el Authorization y daría 401.
 
-const abrirReporte = async (tipo: TipoReporte, nombreReporte: string) => {
-  if (!idEmpresa.value) {
-    makeAlert('Error', 'No se encontró el ID de la empresa logueada.', 'warning')
-    return
-  }
-  try {
-    await abrirReportePdf(tipo, idEmpresa.value)
-  } catch (error) {
-    console.error(`Error al generar el PDF de ${nombreReporte}:`, error)
-    makeAlert('Error', `No hay registros para generar el ${nombreReporte}.`, 'error')
-  }
-}
+// ---------- Accesos rápidos a Reportes ----------
+// Antes generaban el PDF directo, sin pedir fechas. Ahora solo navegan al
+// módulo centralizado de Reportes, con el tipo en la query para que esa
+// pantalla resalte la tarjeta correspondiente -el usuario siempre revisa
+// las fechas y aprieta "Generar reporte" ahí, nunca se genera solo.
+const verLibroDiario = () => router.push({ path: '/reportes', query: { tipo: 'libro-diario' } })
+const verLibroMayor = () => router.push({ path: '/reportes', query: { tipo: 'libro-mayor' } })
+const verBalanceSumasYSaldos = () => router.push({ path: '/reportes', query: { tipo: 'balance-sumas' } })
 
-const verLibroDiario = () => abrirReporte('libro-diario', 'Libro Diario')
-const verLibroMayor = () => abrirReporte('libro-mayor', 'Libro Mayor')
-const verBalanceSumasYSaldos = () => abrirReporte('balance-sumas', 'Balance de Sumas y Saldos')
 
 // ---------- Montaje ----------
 onMounted(() => {

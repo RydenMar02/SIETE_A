@@ -31,10 +31,6 @@
               </select>
             </div>
 
-            <button type="button" class="bg-slate-600 hover:bg-slate-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition" @click="generarPdf">
-              Reporte de asientos
-            </button>
-
             <button type="button" class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition flex items-center gap-1" @click="abrirModal">
               <i class="ti ti-plus"></i>
               Registrar asiento
@@ -187,7 +183,6 @@ import {
   obtenerDetalleAsiento,
   anularAsiento
 } from '@/services/asientoService'
-import { abrirReportePdf } from '@/services/reportesService'
 
 const { makeToast, makeConfirm } = useAlertas()
 const seleccion = useSeleccionStore()
@@ -348,20 +343,6 @@ const abrirModal = () => {
 }
 
 const recargarTabla = () => cargarAsientos()
-
-// ---------- Reporte PDF ----------
-const generarPdf = async () => {
-  if (!seleccion.idEmpresa) {
-    makeToast('No se encontró la empresa logueada.', 'warning')
-    return
-  }
-  try {
-    await abrirReportePdf('asientos', seleccion.idEmpresa)
-  } catch (error) {
-    console.error('Error al generar el PDF de asientos:', error)
-    makeToast('No se pudo generar el PDF de asientos.', 'error')
-  }
-}
 
 onMounted(cargarAsientos)
 </script>

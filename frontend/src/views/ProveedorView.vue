@@ -38,10 +38,6 @@
               </select>
             </div>
 
-            <button type="button" class="bg-slate-600 hover:bg-slate-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition" @click="generarPdf">
-              Listado de proveedores
-            </button>
-
             <button type="button" class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition flex items-center gap-1" @click="abrirModal">
               <i class="ti ti-plus"></i>
               Registrar proveedor
@@ -126,7 +122,6 @@ import {
   eliminarClienteProveedor,
   type ClienteProveedorDetalle
 } from '@/services/clienteProveedorService'
-import { abrirReportePdf } from '@/services/reportesService'
 const { makeToast, makeConfirm } = useAlertas()
 const seleccion = useSeleccionStore()
 
@@ -232,21 +227,6 @@ const eliminarProveedor = async (item: ClienteProveedorDetalle) => {
     obtenerProveedores()
   } catch (error) {
     manejarError(error, 'No se pudo eliminar el proveedor.')
-  }
-}
-
-// ---------- Reporte PDF ----------
-
-const generarPdf = async () => {
-  if (!seleccion.idEmpresa) {
-    makeToast('No se encontró la empresa logueada.', 'warning')
-    return
-  }
-  try {
-    await abrirReportePdf('proveedores', seleccion.idEmpresa)
-  } catch (error) {
-    console.error('Error al generar el PDF de proveedores:', error)
-    makeToast('No se pudo generar el PDF de proveedores.', 'error')
   }
 }
 

@@ -170,13 +170,19 @@ const grupos: GrupoMenu[] = [
     icono: 'mdi:chart-box-outline',
     roles: [2, 3],
     items: [
-      { label: 'Asientos contables', icono: 'mdi:clipboard-text', to: '/asiento' },
-      /*{ label: 'Libro Diario', icono: 'mdi:book-open-page-variant', to: '/librodiario' },
-      { label: 'Libro Mayor', icono: 'mdi:book-multiple', to: '/libromayor' },
-      { label: 'Balances', icono: 'mdi:chart-bar', to: '/balances' }*/
+      { label: 'Asientos contables', icono: 'mdi:clipboard-text', to: '/asiento' }
     ]
-  }
-/*   {
+  },
+  {
+    clave: 'reportes',
+    titulo: 'Reportes',
+    icono: 'mdi:file-chart-outline',
+    roles: [2, 3],
+    items: [
+      { label: 'Generar reportes', icono: 'mdi:file-document-outline', to: '/reportes' }
+    ]
+  },
+  {
     clave: 'configuracion',
     titulo: 'Configuración',
     icono: 'mdi:cog-outline',
@@ -185,7 +191,7 @@ const grupos: GrupoMenu[] = [
       { label: 'Configuración', icono: 'mdi:wrench-cog-outline', to: '/config' },
       { label: 'Ayuda', icono: 'mdi:help', to: '/ayuda' }
     ]
-  } */
+  }
 ]
 
 const gruposVisibles = computed(() => grupos.filter((g) => g.roles.includes(sesion.idRol)))
