@@ -14,6 +14,21 @@
           <p class="text-gray-500 capitalize">{{ fechaActual }}</p>
         </div>
 
+        <!-- Administración dentro del menú compartido -->
+        <section v-if="esAdmin" class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6" aria-label="Administración">
+          <router-link
+            v-for="item in accesosAdmin"
+            :key="item.to"
+            :to="item.to"
+            class="bg-white border border-gray-200 rounded-xl shadow-sm p-6 hover:border-green-600 focus-visible:ring-2 focus-visible:ring-green-600 transition"
+          >
+            <Icon :icon="item.icono" width="28" class="text-green-700 mb-3" />
+            <h3 class="font-semibold text-gray-900">{{ item.nombre }}</h3>
+            <p class="text-sm text-gray-500 mt-2">{{ item.descripcion }}</p>
+          </router-link>
+        </section>
+
+        <template v-else>
         <!-- Tarjetas resumen -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <div
@@ -103,6 +118,7 @@
           </p>
         </div>
 
+        </template>
       </div>
     </main>
     </div>
@@ -138,6 +154,12 @@ const router = useRouter()
 const { makeAlert } = useAlertas()
 const sesion = useSesionStore()
 const seleccion = useSeleccionStore()
+const esAdmin = computed(() => sesion.idRol === 1)
+const accesosAdmin = [
+  { to: '/User', nombre: 'Usuarios', descripcion: 'Administrar profesores y alumnos', icono: 'mdi:account-group' },
+  { to: '/importar-usuarios', nombre: 'Importar usuarios', descripcion: 'Carga masiva desde archivo Excel', icono: 'mdi:file-excel-outline' },
+  { to: '/backup', nombre: 'Backup', descripcion: 'Copia de seguridad del sistema', icono: 'mdi:database-export-outline' }
+]
 
 // La empresa activa ya no se lee de localStorage: viene del store que armamos
 // en el flujo de selección, y sobrevive a un F5 porque ese store tiene persist: true.
@@ -293,6 +315,9 @@ onMounted(() => {
   fechaActual.value = new Date().toLocaleDateString('es-ES', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
   })
+
+  // El administrador no necesita empresa ni consulta gráficos contables.
+  if (esAdmin.value) return
 
   if (!idEmpresa.value) {
     makeAlert('Atención', 'Debe iniciar sesión para ver los gráficos.', 'warning')

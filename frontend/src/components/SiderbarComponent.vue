@@ -16,11 +16,11 @@
         <Icon icon="mdi:user" width="22" />
         <span class="truncate">{{ nombre }}</span>
       </router-link>
-      <router-link to="/seleccion" class="flex items-center gap-2 px-4 py-3 text-sm text-white bg-siete-dark hover:bg-gray-300">
+      <router-link v-if="!esAdmin" to="/seleccion" class="flex items-center gap-2 px-4 py-3 text-sm text-white bg-siete-dark hover:bg-gray-300">
         <Icon icon="mdi:google-classroom" width="22" />
         <span class="truncate">{{ salaNombre || 'Sin sala seleccionada' }}</span>
       </router-link>
-      <router-link to="/seleccion" class="flex items-center gap-2 px-4 py-3 text-sm text-white  bg-siete-dark hover:bg-gray-300">
+      <router-link v-if="!esAdmin" to="/seleccion" class="flex items-center gap-2 px-4 py-3 text-sm text-white  bg-siete-dark hover:bg-gray-300">
         <Icon icon="mdi:office-building" width="22" />
         <span class="truncate">{{ empresaNombre || 'Sin empresa seleccionada' }}</span>
       </router-link>
@@ -36,14 +36,7 @@
         Menú
       </router-link>
 
-      <router-link
-        v-if="esAdmin"
-        to="/User"
-        class="flex items-center gap-2 px-4 py-3 text-sm text-white hover:bg-gray-300"
-      >
-        <Icon icon="mdi:users" width="22" />
-        Usuarios
-      </router-link>
+
     </nav>
 
     <!-- Grupos colapsables -->
@@ -131,6 +124,14 @@ interface GrupoMenu {
 
 const grupos: GrupoMenu[] = [
   {
+    clave: 'administracion', titulo: 'Administración', icono: 'mdi:shield-account-outline', roles: [1],
+    items: [
+      { label: 'Usuarios', icono: 'mdi:account-group', to: '/User' },
+      { label: 'Importar usuarios', icono: 'mdi:file-excel-outline', to: '/importar-usuarios' },
+      { label: 'Backup', icono: 'mdi:database-export-outline', to: '/backup' }
+    ]
+  },
+  {
     clave: 'salas',
     titulo: 'Salas',
     icono: 'mdi:school-outline',
@@ -199,7 +200,7 @@ const gruposVisibles = computed(() => grupos.filter((g) => g.roles.includes(sesi
 // ---------- Estado de abierto/cerrado de cada grupo ----------
 // Un Set con las claves de los grupos abiertos. Reemplaza los 6 ids distintos
 // (#salasCollapse, #empresaCollapse, etc.) que dependían del JS de Bootstrap.
-const gruposAbiertos = ref(new Set<string>())
+const gruposAbiertos = ref(new Set<string>(esAdmin.value ? ['administracion'] : []))
 
 const toggleGrupo = (clave: string) => {
   if (gruposAbiertos.value.has(clave)) {

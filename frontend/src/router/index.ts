@@ -3,6 +3,9 @@ import { useSesionStore } from '@/stores/useSesionStore'
 import { useTiempoRealStore } from '@/stores/useTiempoRealStore'
 
 const routes = [
+  { path: '/User', name: 'usuarios', meta: { adminOnly: true }, component: () => import('../views/UsuarioView.vue') },
+  { path: '/importar-usuarios', name: 'importar-usuarios', meta: { adminOnly: true }, component: () => import('../views/ImportarUsuariosView.vue') },
+  { path: '/backup', name: 'backup', meta: { adminOnly: true }, component: () => import('../views/BackupView.vue') },
   {
     path: '/',
     name: 'Login',
@@ -59,11 +62,6 @@ const routes = [
     component: () => import('../views/HistorialMovimientosView.vue')
   },
   {
-    path: '/reportes',
-    name: 'reportes',
-    component: () => import('../views/ReportesView.vue')
-  },
-  {
     path: '/sucursal',
     name: 'sucursal',
     component: () => import('../views/SucursalesView.vue')
@@ -109,6 +107,10 @@ router.beforeEach((to, _from, next) => {
 
   if (!sesion.token && !rutasPublicas.includes(String(to.name))) {
     next({ name: 'security' })
+  } else if (to.meta.adminOnly && sesion.idRol !== 1) {
+    next({ name: 'security' })
+  } else if (sesion.token && sesion.idRol === 1 && !to.meta.adminOnly && !['menu', 'perfil', 'security'].includes(String(to.name))) {
+    next({ name: 'menu' })
   } else {
     next()
   }
@@ -118,6 +120,7 @@ router.beforeEach((to, _from, next) => {
 // muestre en vivo. Si el socket todavía no conectó (o no hay sesión), el
 // store simplemente no manda nada — no hace falta chequear acá.
 router.afterEach((to) => {
+  if (useSesionStore().idRol === 1) return
   const tiempoReal = useTiempoRealStore()
   tiempoReal.reportarActividad(to.path)
 })

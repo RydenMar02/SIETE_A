@@ -78,6 +78,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAlertas } from '@/composables/useAlertas'
 import { useSesionStore } from '@/stores/useSesionStore'
+import { useSeleccionStore } from '@/stores/useSeleccionStore'
 import { login as loginRequest } from '@/services/authService'
 
 const router = useRouter()
@@ -108,7 +109,8 @@ const login = async () => {
     })
 
     await makeAlert('¡Éxito!', 'Has iniciado sesión correctamente.', 'success')
-    router.push('/seleccion')
+    if (sesion.idRol === 1) useSeleccionStore().reset()
+    router.replace(sesion.idRol === 1 ? '/menu' : '/seleccion')
   } catch (error) {
     console.error('Error al iniciar sesión:', error)
     makeAlert('Error', 'Cédula o contraseña incorrectos.', 'error')

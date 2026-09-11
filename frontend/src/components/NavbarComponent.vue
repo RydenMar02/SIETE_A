@@ -7,7 +7,7 @@
         type="button"
         class="md:hidden p-2 rounded hover:bg-gray-100"
         aria-label="Abrir menú lateral"
-        @click="$emit('toggle-sidebar')"
+        @click="ui.toggleSidebar()"
       >
         <Icon icon="mdi:menu" width="24" />
       </button>
@@ -24,7 +24,7 @@
         {{ rolLabel }}
       </span>
 
-      <router-link to="/profile" class="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded transition">
+      <router-link to="/perfil" class="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded transition">
         <Icon icon="mdi:account-circle-outline" width="20" />
         Perfil
       </router-link>
@@ -32,6 +32,7 @@
       <button
         type="button"
         class="relative flex items-center gap-1.5 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded transition"
+        v-if="sesion.idRol !== 1"
         @click="toggleNotificaciones"
       >
         <Icon icon="mdi:bell-outline" width="20" />
@@ -78,7 +79,7 @@
         </span>
 
         <router-link
-          to="/profile"
+          to="/perfil"
           class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
           @click="mostrarMenuMovil = false"
         >
@@ -89,7 +90,8 @@
         <button
           type="button"
           class="relative w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
-          @click="toggleNotificaciones"
+          v-if="sesion.idRol !== 1"
+        @click="toggleNotificaciones"
         >
           <Icon icon="mdi:bell-outline" width="20" />
           Notificaciones
@@ -175,17 +177,19 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useUiStore } from '@/stores/useUiStore'
 import { Icon } from '@iconify/vue'
 import { useSesionStore } from '@/stores/useSesionStore'
 import { useSeleccionStore } from '@/stores/useSeleccionStore'
 import { useTiempoRealStore } from '@/stores/useTiempoRealStore'
 import { obtenerMensajesRecibidos, type Mensaje } from '@/services/mensajeService'
-import ChatConProfesorDrawer from '@/components/ChatconProfesorDrawer.vue'
-import ChatConAlumnoModal from '@/components/ChatconAlumnoModal.vue'
+import ChatConProfesorDrawer from '@/components/ChatConProfesorDrawer.vue'
+import ChatConAlumnoModal from '@/components/ChatConAlumnoModal.vue'
 
 defineEmits<{ (e: 'toggle-sidebar'): void }>()
 
 const router = useRouter()
+const ui = useUiStore()
 const sesion = useSesionStore()
 const seleccion = useSeleccionStore()
 const tiempoReal = useTiempoRealStore()
@@ -206,14 +210,14 @@ const esAlumno = computed(() => sesion.idRol === 3)
 // conectar() es un no-op si ya hay un socket vivo, así que esto no abre
 // una conexión nueva por cada navegación.
 onMounted(() => {
-  if (sesion.token) tiempoReal.conectar()
+  if (sesion.token && sesion.idRol !== 1) tiempoReal.conectar()
 })
 
 // Cada vez que hay una sala seleccionada (recién logueado, cambio de sala,
 // o simplemente porque este Navbar se remontó en otra vista) nos unimos a
 // su room. unirseSala() ya es un no-op si es la misma sala de siempre.
 watch(() => seleccion.idSala, (idSala) => {
-  if (idSala) tiempoReal.unirseSala(idSala)
+  if (idSala && sesion.idRol !== 1) tiempoReal.unirseSala(idSala)
 }, { immediate: true })
 
 const logout = () => {
