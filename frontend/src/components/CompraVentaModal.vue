@@ -597,29 +597,58 @@ const manejarError = (error: unknown, mensajePorDefecto: string) => {
 }
 
 // ---------- Cargar datos de edición ----------
+
 const cargarDatosDeEdicion = () => {
   if (!props.itemEditar) return
 
   idEditar.value = props.itemEditar.id_compraventa ?? null
+
   Object.assign(form, { ...props.itemEditar })
+
+  // Mapear nombres que vienen del backend
+  // a los nombres internos que usa el formulario
+  form.idcliente_proveedor =
+    props.itemEditar.id_clienteproveedor ?? ''
+
+  form.id_cuentaexenta =
+    props.itemEditar.id_cuentaexenta ?? ''
+
+  form.id_cuentaiva10 =
+    props.itemEditar.id_cuentagrav10 ?? ''
+
+  form.id_cuentaiva5 =
+    props.itemEditar.id_cuentagrav05 ?? ''
 
   if (props.itemEditar.cuentaExenta) {
     form.cuenta_exenta = props.itemEditar.cuentaExenta.codigo
     nombreCuentaExenta.value = props.itemEditar.cuentaExenta.nombre
   }
+
   if (props.itemEditar.cuentaGrav10) {
     form.cuenta_grav10 = props.itemEditar.cuentaGrav10.codigo
     nombreCuentaIva10.value = props.itemEditar.cuentaGrav10.nombre
   }
+
   if (props.itemEditar.cuentaGrav05) {
     form.cuenta_grav05 = props.itemEditar.cuentaGrav05.codigo
     nombreCuentaIva05.value = props.itemEditar.cuentaGrav05.nombre
   }
 
-  if (props.itemEditar.exenta) form.exenta = formatearImporte(props.itemEditar.exenta)
-  if (props.itemEditar.gravada10) form.gravada10 = formatearImporte(props.itemEditar.gravada10)
-  if (props.itemEditar.gravada05) form.gravada05 = formatearImporte(props.itemEditar.gravada05)
-  if (props.itemEditar.total_factura) form.total_factura = formatearImporte(props.itemEditar.total_factura)
+  if (props.itemEditar.exenta) {
+    form.exenta = formatearImporte(props.itemEditar.exenta)
+  }
+
+  if (props.itemEditar.gravada10) {
+    form.gravada10 = formatearImporte(props.itemEditar.gravada10)
+  }
+
+  if (props.itemEditar.gravada05) {
+    form.gravada05 = formatearImporte(props.itemEditar.gravada05)
+  }
+
+  if (props.itemEditar.total_factura) {
+    form.total_factura = formatearImporte(props.itemEditar.total_factura)
+  }
 }
 
 onMounted(async () => {

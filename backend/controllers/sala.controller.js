@@ -10,7 +10,7 @@ export const getSalas = async (req, res) => {
     try {
         const sql = `
             SELECT 
-                s.id_sala, s.sala, s.curso, s.semestre, s.contra,
+                s.id_sala, s.sala, s.curso, s.semestre, s.contra, s.estado,
                 u.id_usuario, u.nombre,
                 COUNT(suAlumno.id_alumno) AS cantidad_alumnos
             FROM sala_usuario suProfesor
@@ -22,7 +22,8 @@ export const getSalas = async (req, res) => {
                 AND suAlumno.baja = 0
             WHERE suProfesor.id_profesor = :id_profesor
                 AND suProfesor.tipo = 'PROFESOR'
-            GROUP BY s.id_sala, s.sala, s.curso, s.semestre, s.contra, u.id_usuario, u.nombre
+                AND s.estado = 1
+            GROUP BY s.id_sala, s.sala, s.curso, s.semestre, s.contra, s.estado, u.id_usuario, u.nombre
             ORDER BY s.id_sala
             LIMIT :limite OFFSET :desde
         `;

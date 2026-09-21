@@ -32,6 +32,10 @@
               Ver salas
             </button>
 
+            <router-link to="/periodos" class="bg-white border border-green-600 text-green-700 hover:bg-green-50 text-sm font-medium px-4 py-2 rounded-lg transition inline-block">
+              Ver períodos
+            </router-link>
+
             <!--<button type="button" class="bg-white border border-amber-500 text-amber-600 hover:bg-amber-50 text-sm font-medium px-4 py-2 rounded-lg transition" @click="mostrarDivAlumnos">
               Lista de alumnos
             </button> 

@@ -52,6 +52,11 @@ const routes = [
     component: () => import('../views/SalasView.vue')
   },
   {
+    path: '/periodos',
+    name: 'periodos',
+    component: () => import('../views/PeriodoView.vue')
+  },
+  {
     path: '/seguimiento-aula',
     name: 'seguimiento-aula',
     component: () => import('../views/SeguimientoAulaView.vue')
@@ -90,6 +95,11 @@ const routes = [
     path: '/acceso-denegado',
     name: 'security',
     component: () => import('../views/AccessValidation.vue')
+  },
+  {
+  path: '/reportes',
+  name: 'reportes',
+  component: () => import('../views/ReportesView.vue')
   }
 ]
 

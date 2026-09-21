@@ -11,14 +11,19 @@ export function useAlertas () {
     toast[tipo](mensaje)
   }
 
-  const makeConfirm = (titulo: string, texto: string): Promise<SweetAlertResult> => {
+  const makeConfirm = (
+    titulo: string,
+    texto: string,
+    confirmButtonText: string = 'Aceptar',
+    cancelButtonText: string = 'Cancelar'
+  ): Promise<SweetAlertResult> => {
     return Swal.fire({
       title: titulo,
       text: texto,
       icon: 'question',
       showCancelButton: true,
-      confirmButtonText: 'Aceptar',
-      cancelButtonText: 'Cancelar',
+      confirmButtonText,
+      cancelButtonText,
       reverseButtons: true,
       scrollbarPadding: false,
       confirmButtonColor: '#4F4F75',

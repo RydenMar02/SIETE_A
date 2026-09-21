@@ -3,7 +3,7 @@ import api from './api'
 // Ajustar si tu router se monta bajo otro prefijo (ej: si en app.js hicieras
 // app.use('/api/reportes', reportesRouter), esto ya coincide; si lo montaste
 // distinto, cambiar solo esta constante.
-const BASE = '/api/reportes'
+const BASE = '/api/reporte'
 
 export type TipoReporte =
   | 'asientos'
@@ -46,7 +46,7 @@ export const obtenerBlobReportePdf = async (
 // toca ni se reutiliza para los reportes generales de arriba.
 export const obtenerBlobReporteActividadAlumno = async (idSala: number, idAlumno: number, fecha: string) => {
   const response = await api.get(`${BASE}/actividad-alumno/pdf`, {
-    params: { id_sala: idSala, id_alumno: idAlumno, fecha },
+    params: { id_sala: idSala, id_usuario: idAlumno, fecha },
     responseType: 'blob'
   })
   return URL.createObjectURL(response.data)

@@ -22,7 +22,7 @@ import asientoRoutes from './routes/asiento.routes.js';
 import reportesRoutes from './routes/reportes.routes.js';
 import graficosRoutes from './routes/graficos.routes.js';
 import mensajeRoutes from './routes/mensaje.routes.js';
-
+import backupRoutes from './routes/backup.routes.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const app = express();
@@ -65,6 +65,7 @@ app.use('/api/asientos', asientoRoutes);
 app.use('/api/reportes', reportesRoutes);
 app.use('/api/graficos', graficosRoutes);
 app.use('/api/mensajes', mensajeRoutes);
+app.use('/api/backup', backupRoutes);
 
 app.get('/', (req, res) => {
     res.json({ msg: 'API funcionando correctamente' });

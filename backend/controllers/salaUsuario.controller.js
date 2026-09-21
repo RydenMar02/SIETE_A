@@ -6,7 +6,7 @@ export const getSalasConProfesores = async (req, res) => {
     const { desde = 0, limite = 10, curso, semestre, id_usuario, rol } = req.query;
 
     try {
-        const whereSala = {};
+        const whereSala = { estado: 1 };
         if (curso) whereSala.curso = curso;
         if (semestre) whereSala.semestre = semestre;
 
@@ -98,8 +98,12 @@ export const ingresarSala = async (req, res) => {
             return res.status(400).json({ msg: 'La contraseña es obligatoria' });
         }
 
-        const sala = await Sala.findByPk(id_sala, { attributes: ['contra'] });
+        const sala = await Sala.findByPk(id_sala, { attributes: ['contra', 'estado'] });
         if (!sala) return res.status(404).json({ msg: 'La sala no existe' });
+
+        if (sala.estado !== 1) {
+            return res.status(400).json({ msg: 'Esta sala está inactiva y no admite nuevos ingresos' });
+        }
 
         if (sala.contra.trim() !== contrasena.trim()) {
             return res.status(401).json({ msg: 'Contraseña de sala incorrecta' });

@@ -142,8 +142,8 @@ import { useAlertas } from '@/composables/useAlertas'
 import { useSesionStore } from '@/stores/useSesionStore'
 import Navbar from '@/components/NavbarComponent.vue'
 import Siderbar from '@/components/SiderbarComponent.vue'
-//import CambiarContra from '@/components/ChangePassword.vue'
-import { obtenerUsuario, modificarUsuario, type UsuarioPayload } from '@/services/usuarioService'
+import CambiarContra from '@/components/CambiarContrasena.vue'
+import { obtenerMiPerfil, actualizarMiPerfil, type MiPerfilPayload } from '@/services/usuarioService'
 
 
 const { makeToast, makeConfirm } = useAlertas()
@@ -157,7 +157,7 @@ const form = reactive({ cedula: '', nombre: '', telefono: '', correo: '' })
 
 const cargarPerfil = async () => {
   try {
-    const { data } = await obtenerUsuario(sesion.idUsuario)
+    const { data } = await obtenerMiPerfil()
     form.cedula = data.cedula ?? ''
     form.nombre = data.nombre ?? ''
     form.telefono = data.telefono ?? ''
@@ -240,17 +240,15 @@ const modificar = async () => {
     return
   }
 
-  const payload: UsuarioPayload = {
+  const payload: MiPerfilPayload = {
     nombre: form.nombre,
     cedula: form.cedula,
     correo: form.correo.toLowerCase(),
-    telefono: form.telefono,
-    id_rol: sesion.idRol,
-    estado: true
+    telefono: form.telefono
   }
 
   try {
-    await modificarUsuario(sesion.idUsuario, payload)
+    await actualizarMiPerfil(payload)
 
     // El nombre se usa en Navbar/Sidebar vía el store de sesión — se
     // actualiza ahí también para que se refleje sin recargar la página.
